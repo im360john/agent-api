@@ -140,7 +140,6 @@ async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, ses
     
     # NPX-based MCP servers
     npx_servers = [
-        "npx -y @modelcontextprotocol/server-google-drive",
         "npx -y @modelcontextprotocol/server-slack",
         "npx -y @modelcontextprotocol/server-fetch"
     ]
