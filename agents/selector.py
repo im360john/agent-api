@@ -6,6 +6,14 @@ from agents.finance_agent import get_finance_agent
 from agents.web_agent import get_web_agent
 from agents.comprehensive_agent import get_comprehensive_agent_sync
 
+
+try:
+    from agents.comprehensive_agent import get_comprehensive_agent_sync
+    print("Import successful")
+except Exception as e:
+    print(f"Import failed: {e}")
+
+
 class AgentType(Enum):
     WEB_AGENT = "web_agent"
     AGNO_ASSIST = "agno_assist"
