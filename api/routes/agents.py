@@ -1,6 +1,6 @@
 from enum import Enum
 from logging import getLogger
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, List, Optional, Union
 
 from agno.agent import Agent, AgentKnowledge
 from fastapi import APIRouter, HTTPException, status
@@ -65,7 +65,7 @@ class RunRequest(BaseModel):
 
 
 @agents_router.post("/{agent_id}/runs", status_code=status.HTTP_200_OK)
-async def create_agent_run(agent_id: AgentType, body: RunRequest):
+async def create_agent_run(agent_id: str, body: RunRequest):  # Changed to str
     """
     Sends a message to a specific agent and returns the response.
 
@@ -77,16 +77,31 @@ async def create_agent_run(agent_id: AgentType, body: RunRequest):
         Either a streaming response or the complete agent response
     """
     logger.debug(f"RunRequest: {body}")
+    logger.debug(f"Agent ID requested: {agent_id}")
 
     try:
+        # Convert string to AgentType enum
+        agent_type = None
+        for enum_member in AgentType:
+            if enum_member.value == agent_id:
+                agent_type = enum_member
+                break
+        
+        if agent_type is None:
+            raise ValueError(f"Unknown agent ID: {agent_id}")
+            
         agent: Agent = get_agent(
             model_id=body.model.value,
-            agent_id=agent_id,
+            agent_id=agent_type,  # Pass the enum
             user_id=body.user_id,
             session_id=body.session_id,
         )
     except ValueError as e:
+        logger.error(f"Error getting agent: {e}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     if body.stream:
         return StreamingResponse(
@@ -102,7 +117,7 @@ async def create_agent_run(agent_id: AgentType, body: RunRequest):
 
 
 @agents_router.post("/{agent_id}/knowledge/load", status_code=status.HTTP_200_OK)
-async def load_agent_knowledge(agent_id: AgentType):
+async def load_agent_knowledge(agent_id: str):  # Changed to str
     """
     Loads the knowledge base for a specific agent.
 
@@ -112,9 +127,22 @@ async def load_agent_knowledge(agent_id: AgentType):
     Returns:
         A success message if the knowledge base is loaded.
     """
+    # Convert string to enum
+    agent_type = None
+    for enum_member in AgentType:
+        if enum_member.value == agent_id:
+            agent_type = enum_member
+            break
+    
+    if agent_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown agent ID: {agent_id}"
+        )
+
     agent_knowledge: Optional[AgentKnowledge] = None
 
-    if agent_id == AgentType.AGNO_ASSIST:
+    if agent_type == AgentType.AGNO_ASSIST:
         agent_knowledge = get_agno_assist_knowledge()
     else:
         raise HTTPException(
