@@ -25,20 +25,32 @@ def get_available_agents() -> List[str]:
     return [agent.value for agent in AgentType]
 
 
+# In selector.py, update the get_agent function
 def get_agent(
-    model_id: str = "gpt-4.1",
+    model_id: str = "gpt-4o",  # Changed default from gpt-4.1
     agent_id: Optional[AgentType] = None,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     debug_mode: bool = True,
 ):
-    if agent_id == AgentType.WEB_AGENT:
-        return get_web_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
-    elif agent_id == AgentType.AGNO_ASSIST:
-        return get_agno_assist(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
-    elif agent_id == AgentType.FINANCE_AGENT:
-        return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
-    elif agent_id == AgentType.DISCOUNT_AGENT:
-        return get_comprehensive_agent_sync(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+    print(f"Getting agent: {agent_id}, model: {model_id}, user: {user_id}")
+    
+    try:
+        if agent_id == AgentType.WEB_AGENT:
+            return get_web_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+        elif agent_id == AgentType.AGNO_ASSIST:
+            return get_agno_assist(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+        elif agent_id == AgentType.FINANCE_AGENT:
+            return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+        elif agent_id == AgentType.DISCOUNT_AGENT:
+            print("Creating comprehensive agent...")
+            agent = get_comprehensive_agent_sync(model_id=model_id, agent_id=agent_id.value, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+            print(f"Agent created: {agent.agent_id}")
+            return agent
+    except Exception as e:
+        print(f"Error creating agent {agent_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
         
     raise ValueError(f"Agent: {agent_id} not found")
