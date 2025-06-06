@@ -18,7 +18,7 @@ class AgentType(Enum):
     WEB_AGENT = "web_agent"
     AGNO_ASSIST = "agno_assist"
     FINANCE_AGENT = "finance_agent"
-    DISCOUNT_AGENT = "discount_agent"
+    DISCOUNT_AGENT = "comprehensive_agent"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
