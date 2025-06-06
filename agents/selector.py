@@ -4,13 +4,13 @@ from typing import List, Optional
 from agents.agno_assist import get_agno_assist
 from agents.finance_agent import get_finance_agent
 from agents.web_agent import get_web_agent
-
+from agents.comprehensive_agent import get_comprehensive_agent_sync
 
 class AgentType(Enum):
     WEB_AGENT = "web_agent"
     AGNO_ASSIST = "agno_assist"
     FINANCE_AGENT = "finance_agent"
-
+    DISCOUNT_AGENT = "discount_agent"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
@@ -30,5 +30,7 @@ def get_agent(
         return get_agno_assist(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.FINANCE_AGENT:
         return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
-
+    elif agent_id == AgentType.DISCOUNT_AGENT:
+        return get_comprehensive_agent_sync(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+        
     raise ValueError(f"Agent: {agent_id} not found")
