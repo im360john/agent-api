@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # The crucial start command for Render
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "3000"]
