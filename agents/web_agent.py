@@ -1,5 +1,8 @@
+# agents/web_agent.py
+import os
 from textwrap import dedent
-from typing import Optional
+from typing import Optional, List
+from contextlib import AsyncExitStack
 
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
@@ -7,6 +10,7 @@ from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.mcp import MCPTools
 
 from db.session import db_url
 
@@ -16,7 +20,108 @@ def get_web_agent(
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     debug_mode: bool = True,
+    mcp_sse_urls: Optional[List[str]] = None,
 ) -> Agent:
+    """
+    Create a Web Search Agent with optional MCP SSE tool integration.
+    
+    Args:
+        model_id: The model to use for the agent
+        user_id: Optional user identifier
+        session_id: Optional session identifier
+        debug_mode: Whether to show debug logs
+        mcp_sse_urls: Optional list of MCP SSE URLs to connect to for additional tools
+        
+    Returns:
+        Agent configured with web search and optional MCP tools
+    """
+    
+    # Base tools - always include DuckDuckGo
+    base_tools = [DuckDuckGoTools()]
+    
+    # Check if MCP SSE URLs are provided via parameter or environment
+    if mcp_sse_urls is None:
+        # Check environment for MCP URLs
+        env_urls = os.getenv("SNOWFLAKE_MCP_URL", "").strip()
+        if env_urls:
+            mcp_sse_urls = [url.strip() for url in env_urls.split(",") if url.strip()]
+    
+    # If we have MCP URLs, we need to handle them differently
+    if mcp_sse_urls:
+        # For async MCP tools, we need to return a function that creates the agent
+        # within an async context
+        async def create_agent_with_mcp():
+            all_tools = base_tools.copy()
+            
+            async with AsyncExitStack() as stack:
+                # Connect to each MCP SSE server
+                for url in mcp_sse_urls:
+                    try:
+                        mcp_tool = await stack.enter_async_context(MCPTools(url=url))
+                        all_tools.append(mcp_tool)
+                        if debug_mode:
+                            print(f"Successfully connected to MCP server: {url}")
+                    except Exception as e:
+                        print(f"Warning: Failed to connect to MCP server {url}: {e}")
+                        # Continue with other tools
+                
+                # Create and return the agent with all tools
+                return create_agent_instance(
+                    model_id=model_id,
+                    user_id=user_id,
+                    session_id=session_id,
+                    debug_mode=debug_mode,
+                    tools=all_tools,
+                    mcp_info=f"Connected to {len(mcp_sse_urls)} MCP server(s)"
+                )
+        
+        # Return a wrapper that handles the async context
+        import asyncio
+        import nest_asyncio
+        nest_asyncio.apply()
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(create_agent_with_mcp())
+        finally:
+            loop.close()
+    else:
+        # No MCP tools, create agent with just base tools
+        return create_agent_instance(
+            model_id=model_id,
+            user_id=user_id,
+            session_id=session_id,
+            debug_mode=debug_mode,
+            tools=base_tools,
+            mcp_info="No MCP servers configured"
+        )
+
+
+def create_agent_instance(
+    model_id: str,
+    user_id: Optional[str],
+    session_id: Optional[str],
+    debug_mode: bool,
+    tools: List,
+    mcp_info: str = ""
+) -> Agent:
+    """
+    Create the actual agent instance with the provided tools.
+    
+    This is separated out to be reused whether or not MCP tools are included.
+    """
+    
+    # Build tool list description for instructions
+    tool_descriptions = []
+    for tool in tools:
+        if hasattr(tool, 'name'):
+            tool_descriptions.append(f"- {tool.name}")
+        elif hasattr(tool, '__class__'):
+            tool_descriptions.append(f"- {tool.__class__.__name__}")
+    
+    tools_list = "\n".join(tool_descriptions) if tool_descriptions else "- DuckDuckGoTools (web search)"
+    
     return Agent(
         name="Web Search Agent",
         agent_id="web_search_agent",
@@ -24,20 +129,29 @@ def get_web_agent(
         session_id=session_id,
         model=OpenAIChat(id=model_id),
         # Tools available to the agent
-        tools=[DuckDuckGoTools()],
+        tools=tools,
         # Description of the agent
-        description=dedent("""\
+        description=dedent(f"""\
             You are WebX, an advanced Web Search Agent designed to deliver accurate, context-rich information from the web.
-
+            
+            {mcp_info}
+            
             Your responses should be clear, concise, and supported by citations from the web.
         """),
         # Instructions for the agent
-        instructions=dedent("""\
+        instructions=dedent(f"""\
             As WebX, your goal is to provide users with accurate, context-rich information from the web. Follow these steps meticulously:
+
+            Available Tools:
+            {tools_list}
+            
+            When MCP tools are available, they may provide additional capabilities beyond web search. 
+            Use the most appropriate tool for each task.
 
             1. Understand and Search:
             - Carefully analyze the user's query to identify 1-3 *precise* search terms.
             - Use the `duckduckgo_search` tool to gather relevant information. Prioritize reputable and recent sources.
+            - If MCP tools are available, check if they can provide more specific or accurate information for the query.
             - Cross-reference information from multiple sources to ensure accuracy.
             - If initial searches are insufficient or yield conflicting information, refine your search terms or acknowledge the limitations/conflicts in your response.
 
@@ -68,7 +182,7 @@ def get_web_agent(
             - Encourage the user to ask further questions if they need more clarification or if you can assist in a different way.
 
             Additional Information:
-            - You are interacting with the user_id: {current_user_id}
+            - You are interacting with the user_id: {{current_user_id}}
             - The user's name might be different from the user_id, you may ask for it if needed and add it to your memory if they share it with you.\
         """),
         # This makes `current_user_id` available in the instructions
@@ -98,4 +212,34 @@ def get_web_agent(
         add_datetime_to_instructions=True,
         # Show debug logs
         debug_mode=debug_mode,
+    )
+
+
+# Optional: Create a simpler version for testing MCP connections
+def get_web_agent_with_mcp(
+    mcp_sse_url: str,
+    model_id: str = "gpt-4.1",
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    debug_mode: bool = True,
+) -> Agent:
+    """
+    Convenience function to create a web agent with a single MCP SSE URL.
+    
+    Args:
+        mcp_sse_url: The MCP SSE URL to connect to
+        model_id: The model to use for the agent
+        user_id: Optional user identifier
+        session_id: Optional session identifier
+        debug_mode: Whether to show debug logs
+        
+    Returns:
+        Agent configured with web search and MCP tools
+    """
+    return get_web_agent(
+        model_id=model_id,
+        user_id=user_id,
+        session_id=session_id,
+        debug_mode=debug_mode,
+        mcp_sse_urls=[mcp_sse_url]
     )
