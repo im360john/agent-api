@@ -1,29 +1,13 @@
-FROM agnohq/python:3.12
+FROM python:3.12-slim
 
-ARG USER=app
-ARG APP_DIR=/app
-ENV APP_DIR=${APP_DIR}
+WORKDIR /app
 
-# Create user and home directory
-RUN groupadd -g 61000 ${USER} \
-  && useradd -g 61000 -u 61000 -ms /bin/bash -d ${APP_DIR} ${USER}
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR ${APP_DIR}
-
-# Copy requirements.txt
-COPY requirements.txt ./
-
-# Install requirements
-RUN uv pip sync requirements.txt --system
-
-# Copy project files
+# Copy the rest of the application
 COPY . .
 
-# Set permissions for the /app directory
-RUN chown -R ${USER}:${USER} ${APP_DIR}
-
-# Switch to non-root user
-USER ${USER}
-
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
-CMD ["chill"]
+# The crucial start command for Render
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
