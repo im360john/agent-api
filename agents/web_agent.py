@@ -1,7 +1,9 @@
 # agents/web_agent.py
 import os
+import sys
 from textwrap import dedent
 from typing import Optional, List
+from datetime import datetime
 
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
@@ -12,6 +14,24 @@ from agno.tools.duckduckgo import DuckDuckGoTools
 
 from db.session import db_url
 
+# Force debug output
+def debug_print(msg):
+    """Force print to stdout and stderr"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    full_msg = f"[WEB_AGENT DEBUG {timestamp}] {msg}"
+    print(full_msg, file=sys.stdout, flush=True)
+    print(full_msg, file=sys.stderr, flush=True)
+    
+    # Also try logger
+    try:
+        from logging import getLogger
+        logger = getLogger(__name__)
+        logger.debug(f"WEB_AGENT: {msg}")
+    except:
+        pass
+
+# Log at module import time
+debug_print("Module web_agent.py is being imported")
 
 def get_web_agent(
     model_id: str = "gpt-4.1",
@@ -22,89 +42,60 @@ def get_web_agent(
 ) -> Agent:
     """
     Create a Web Search Agent with optional MCP SSE tool integration.
-    
-    Args:
-        model_id: The model to use for the agent
-        user_id: Optional user identifier
-        session_id: Optional session identifier
-        debug_mode: Whether to show debug logs
-        mcp_sse_urls: Optional list of MCP SSE URLs to connect to for additional tools
-        
-    Returns:
-        Agent configured with web search and optional MCP tools
     """
     
-    print("=" * 80)
-    print("WEB_AGENT INITIALIZATION STARTING")
-    print("=" * 80)
-    print(f"Parameters received:")
-    print(f"  - model_id: {model_id}")
-    print(f"  - user_id: {user_id}")
-    print(f"  - session_id: {session_id}")
-    print(f"  - debug_mode: {debug_mode}")
-    print(f"  - mcp_sse_urls: {mcp_sse_urls}")
+    debug_print("get_web_agent() function called")
+    debug_print(f"Stack trace: {' -> '.join([f.f_code.co_name for f in sys._getframe().f_back.__iter__()][:5])}")
+    
+    # Write to a file to ensure we're executing
+    try:
+        with open('/tmp/web_agent_debug.log', 'a') as f:
+            f.write(f"\n{'='*80}\n")
+            f.write(f"get_web_agent called at {datetime.now()}\n")
+            f.write(f"Parameters: model_id={model_id}, user_id={user_id}, session_id={session_id}, debug_mode={debug_mode}, mcp_sse_urls={mcp_sse_urls}\n")
+    except:
+        pass
+    
+    # Print with logger
+    from logging import getLogger
+    logger = getLogger(__name__)
+    logger.debug("**************** Agent ID: web_search_agent ****************")
+    
+    debug_print(f"Parameters: model_id={model_id}, user_id={user_id}, session_id={session_id}")
+    
+    # Check environment
+    env_mcp = os.getenv("MCP_SSE_URLS", "NOT_SET")
+    debug_print(f"Environment MCP_SSE_URLS: {env_mcp}")
     
     # Check if MCP SSE URLs are provided via parameter or environment
     if mcp_sse_urls is None:
-        print("\nNo MCP URLs provided as parameter, checking environment...")
-        # Check environment for MCP URLs
         env_urls = os.getenv("MCP_SSE_URLS", "").strip()
-        print(f"Environment MCP_SSE_URLS: '{env_urls}'")
-        
         if env_urls:
             mcp_sse_urls = [url.strip() for url in env_urls.split(",") if url.strip()]
-            print(f"Parsed MCP URLs from environment: {mcp_sse_urls}")
-        else:
-            print("No MCP URLs found in environment")
-    else:
-        print(f"\nMCP URLs provided as parameter: {mcp_sse_urls}")
+            debug_print(f"MCP URLs from environment: {mcp_sse_urls}")
     
     # Create base tools
-    print("\nCreating base tools...")
-    duckduckgo_tools = DuckDuckGoTools()
-    print(f"DuckDuckGoTools created: {duckduckgo_tools}")
-    print(f"DuckDuckGoTools type: {type(duckduckgo_tools)}")
-    print(f"DuckDuckGoTools attributes: {dir(duckduckgo_tools)}")
+    debug_print("Creating DuckDuckGoTools...")
+    base_tools = [DuckDuckGoTools()]
     
-    base_tools = [duckduckgo_tools]
-    print(f"Base tools list: {base_tools}")
-    
-    # Check for MCP import availability
-    print("\nChecking MCP import availability...")
+    # MCP availability check
+    mcp_available = False
     try:
         from agno.tools.mcp import MCPTools
-        print("✓ MCPTools imported successfully")
-        
-        try:
-            from mcp import StdioServerParameters
-            print("✓ StdioServerParameters imported successfully")
-            mcp_available = True
-        except ImportError as e:
-            print(f"✗ Failed to import StdioServerParameters: {e}")
-            mcp_available = False
+        debug_print("MCPTools import successful")
+        mcp_available = True
     except ImportError as e:
-        print(f"✗ Failed to import MCPTools: {e}")
-        mcp_available = False
+        debug_print(f"MCPTools import failed: {e}")
     
-    # Handle MCP URLs if available
-    mcp_info = "No MCP servers configured"
-    if mcp_sse_urls and mcp_available:
-        print(f"\nMCP URLs detected and MCP imports available")
-        print(f"Would attempt to connect to: {mcp_sse_urls}")
-        print("NOTE: Synchronous MCP connection not currently implemented")
-        print("MCP tools require async context which conflicts with uvloop")
-        mcp_info = f"MCP configured but not connected (requires async): {len(mcp_sse_urls)} server(s)"
-    elif mcp_sse_urls and not mcp_available:
-        print(f"\nMCP URLs detected but MCP imports not available")
-        print("Cannot use MCP tools without proper imports")
-        mcp_info = "MCP URLs provided but MCP libraries not available"
+    # MCP info for description
+    if mcp_sse_urls:
+        debug_print(f"MCP URLs configured: {len(mcp_sse_urls)} servers")
+        mcp_info = f"MCP servers configured: {len(mcp_sse_urls)}"
     else:
-        print("\nNo MCP configuration detected")
+        debug_print("No MCP URLs configured")
+        mcp_info = "No MCP servers configured"
     
-    # Create the agent
-    print("\nCreating Agent instance...")
-    print(f"Tools being passed to Agent: {base_tools}")
-    print(f"Number of tools: {len(base_tools)}")
+    debug_print("Creating Agent instance...")
     
     agent = Agent(
         name="Web Search Agent",
@@ -127,8 +118,8 @@ def get_web_agent(
             As WebX, your goal is to provide users with accurate, context-rich information from the web. Follow these steps meticulously:
 
             Available Tools:
-            - DuckDuckGo web search (primary tool)
-            {f"- MCP tools (not connected in sync mode)" if mcp_sse_urls else ""}
+            - DuckDuckGo web search
+            {f"- MCP tools: {mcp_sse_urls}" if mcp_sse_urls else ""}
 
             1. Understand and Search:
             - Carefully analyze the user's query to identify 1-3 *precise* search terms.
@@ -195,37 +186,11 @@ def get_web_agent(
         debug_mode=debug_mode,
     )
     
-    print(f"\nAgent created successfully")
-    print(f"Agent ID: {agent.agent_id}")
-    print(f"Agent name: {agent.name}")
+    debug_print("Agent created successfully")
     
-    # Check what tools the agent actually has
-    if hasattr(agent, 'tools'):
-        print(f"\nAgent tools attribute: {agent.tools}")
-        print(f"Number of tools in agent: {len(agent.tools) if agent.tools else 0}")
-        if agent.tools:
-            for i, tool in enumerate(agent.tools):
-                print(f"  Tool {i}: {tool}")
-                print(f"    Type: {type(tool)}")
-                if hasattr(tool, 'name'):
-                    print(f"    Name: {tool.name}")
-                if hasattr(tool, '__dict__'):
-                    print(f"    Attributes: {tool.__dict__}")
-    else:
-        print("\nAgent has no 'tools' attribute")
-    
-    # Check for other tool-related attributes
-    print("\nChecking for other tool-related attributes on agent:")
-    tool_attrs = [attr for attr in dir(agent) if 'tool' in attr.lower()]
-    for attr in tool_attrs:
-        try:
-            value = getattr(agent, attr)
-            print(f"  {attr}: {value}")
-        except Exception as e:
-            print(f"  {attr}: <error accessing: {e}>")
-    
-    print("\n" + "=" * 80)
-    print("WEB_AGENT INITIALIZATION COMPLETE")
-    print("=" * 80)
+    # Final debug
+    print("=" * 80, flush=True)
+    print("WEB_AGENT INITIALIZATION COMPLETE", flush=True)
+    print("=" * 80, flush=True)
     
     return agent
