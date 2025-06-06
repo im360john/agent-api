@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, Optional, Union
 from agents.agno_assist import get_agno_assist
 from agents.finance_agent import get_finance_agent
-from agents.web_agent import get_web_agent, get_web_agent_async
+from agents.web_agent import get_web_agent
 
 try:
     from agents.comprehensive_agent import get_comprehensive_agent_sync
@@ -51,7 +51,7 @@ def get_agent(
     try:
         if agent_id == AgentType.WEB_AGENT:
             print("Creating web agent...")
-            return get_web_agent_async(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+            return get_web_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
         elif agent_id == AgentType.AGNO_ASSIST:
             print("Creating agno assist...")
             return get_agno_assist(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
