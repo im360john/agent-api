@@ -2,7 +2,6 @@
 import os
 from textwrap import dedent
 from typing import Optional, List
-from contextlib import AsyncExitStack
 
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
@@ -10,7 +9,6 @@ from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.tools.mcp import MCPTools
 
 from db.session import db_url
 
@@ -42,60 +40,30 @@ def get_web_agent(
     # Check if MCP SSE URLs are provided via parameter or environment
     if mcp_sse_urls is None:
         # Check environment for MCP URLs
-        env_urls = os.getenv("SNOWFLAKE_MCP_URL", "").strip()
+        env_urls = os.getenv("MCP_SSE_URLS", "").strip()
         if env_urls:
             mcp_sse_urls = [url.strip() for url in env_urls.split(",") if url.strip()]
     
-    # If we have MCP URLs, we need to handle them differently
+    # For now, we'll create the agent without MCP tools in the synchronous context
+    # MCP tools require async context which is incompatible with the current setup
+    # We'll log a warning if MCP URLs are provided
     if mcp_sse_urls:
-        # For async MCP tools, we need to return a function that creates the agent
-        # within an async context
-        async def create_agent_with_mcp():
-            all_tools = base_tools.copy()
-            
-            async with AsyncExitStack() as stack:
-                # Connect to each MCP SSE server
-                for url in mcp_sse_urls:
-                    try:
-                        mcp_tool = await stack.enter_async_context(MCPTools(url=url))
-                        all_tools.append(mcp_tool)
-                        if debug_mode:
-                            print(f"Successfully connected to MCP server: {url}")
-                    except Exception as e:
-                        print(f"Warning: Failed to connect to MCP server {url}: {e}")
-                        # Continue with other tools
-                
-                # Create and return the agent with all tools
-                return create_agent_instance(
-                    model_id=model_id,
-                    user_id=user_id,
-                    session_id=session_id,
-                    debug_mode=debug_mode,
-                    tools=all_tools,
-                    mcp_info=f"Connected to {len(mcp_sse_urls)} MCP server(s)"
-                )
-        
-        # Return a wrapper that handles the async context
-        import asyncio
-        import nest_asyncio
-        nest_asyncio.apply()
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(create_agent_with_mcp())
-        finally:
-            loop.close()
+        print(f"Warning: MCP SSE URLs provided but async MCP tools are not supported in synchronous context")
+        print(f"MCP URLs: {mcp_sse_urls}")
+        print("To use MCP tools, the agent needs to be created in an async context")
+        mcp_info = f"MCP servers configured but not connected (requires async context): {len(mcp_sse_urls)} server(s)"
     else:
-        # No MCP tools, create agent with just base tools
-        return create_agent_instance(
-            model_id=model_id,
-            user_id=user_id,
-            session_id=session_id,
-            debug_mode=debug_mode,
-            tools=base_tools,
-            mcp_info="No MCP servers configured"
-        )
+        mcp_info = "No MCP servers configured"
+    
+    # Create agent with base tools only
+    return create_agent_instance(
+        model_id=model_id,
+        user_id=user_id,
+        session_id=session_id,
+        debug_mode=debug_mode,
+        tools=base_tools,
+        mcp_info=mcp_info
+    )
 
 
 def create_agent_instance(
@@ -215,31 +183,55 @@ def create_agent_instance(
     )
 
 
-# Optional: Create a simpler version for testing MCP connections
-def get_web_agent_with_mcp(
-    mcp_sse_url: str,
+# Alternative: Create an async version for use with MCP
+async def get_web_agent_async(
     model_id: str = "gpt-4.1",
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     debug_mode: bool = True,
+    mcp_sse_urls: Optional[List[str]] = None,
 ) -> Agent:
     """
-    Convenience function to create a web agent with a single MCP SSE URL.
+    Async version of get_web_agent that can properly handle MCP SSE connections.
     
-    Args:
-        mcp_sse_url: The MCP SSE URL to connect to
-        model_id: The model to use for the agent
-        user_id: Optional user identifier
-        session_id: Optional session identifier
-        debug_mode: Whether to show debug logs
-        
-    Returns:
-        Agent configured with web search and MCP tools
+    This should be used in async contexts where MCP tools are needed.
     """
-    return get_web_agent(
+    from agno.tools.mcp import MCPTools
+    from contextlib import AsyncExitStack
+    
+    # Base tools
+    all_tools = [DuckDuckGoTools()]
+    
+    # Check for MCP URLs
+    if mcp_sse_urls is None:
+        env_urls = os.getenv("MCP_SSE_URLS", "").strip()
+        if env_urls:
+            mcp_sse_urls = [url.strip() for url in env_urls.split(",") if url.strip()]
+    
+    mcp_info = "No MCP servers configured"
+    
+    # Connect to MCP servers if URLs provided
+    if mcp_sse_urls:
+        connected_count = 0
+        async with AsyncExitStack() as stack:
+            for url in mcp_sse_urls:
+                try:
+                    mcp_tool = await stack.enter_async_context(MCPTools(url=url))
+                    all_tools.append(mcp_tool)
+                    connected_count += 1
+                    if debug_mode:
+                        print(f"Successfully connected to MCP server: {url}")
+                except Exception as e:
+                    print(f"Warning: Failed to connect to MCP server {url}: {e}")
+            
+            mcp_info = f"Connected to {connected_count}/{len(mcp_sse_urls)} MCP server(s)"
+    
+    # Create and return the agent
+    return create_agent_instance(
         model_id=model_id,
         user_id=user_id,
         session_id=session_id,
         debug_mode=debug_mode,
-        mcp_sse_urls=[mcp_sse_url]
+        tools=all_tools,
+        mcp_info=mcp_info
     )
