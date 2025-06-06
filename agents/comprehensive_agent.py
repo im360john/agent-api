@@ -168,7 +168,13 @@ class TreezDiscountTools(Toolkit):
         return self._make_request("/poc-gpt-create-discount", payload)
 
 
-async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, session_id: str = None):
+async def get_comprehensive_agent(
+    agent_id: str = None, 
+    user_id: str = None, 
+    session_id: str = None,
+    model_id: str = "gpt-4o",
+    debug_mode: bool = True
+):
     """
     Create a comprehensive agent with:
     - MCP servers: Google Drive, Slack, Fetch (via npx)
@@ -187,11 +193,12 @@ async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, ses
     }
     
     # NPX-based MCP servers
-    npx_servers = [
-        "npx -y @modelcontextprotocol/server-google-drive",
-        "npx -y @modelcontextprotocol/server-slack",
-        "npx -y @modelcontextprotocol/server-fetch"
-    ]
+    npx_servers = []
+    if os.getenv("GOOGLE_DRIVE_TOKEN"):
+        npx_servers.append("npx -y @modelcontextprotocol/server-google-drive")
+    if os.getenv("SLACK_TOKEN"):
+        npx_servers.append("npx -y @modelcontextprotocol/server-slack")
+    npx_servers.append("npx -y @modelcontextprotocol/server-fetch")  # Fetch doesn't need auth
     
     # Initialize tools list
     all_tools = []
@@ -224,8 +231,12 @@ async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, ses
     async with AsyncExitStack() as stack:
         # Enter all MCP contexts
         for mcp_context in mcp_contexts:
-            mcp_tools = await stack.enter_async_context(mcp_context)
-            all_tools.append(mcp_tools)
+            try:
+                mcp_tools = await stack.enter_async_context(mcp_context)
+                all_tools.append(mcp_tools)
+            except Exception as e:
+                print(f"Warning: Failed to initialize MCP context: {e}")
+                # Continue with other tools
         
         # Create and return the agent
         return Agent(
@@ -233,7 +244,7 @@ async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, ses
             name="Comprehensive Multi-Tool Agent",
             user_id=user_id,
             session_id=session_id,
-            model=OpenAIChat(id="gpt-4o", temperature=0.7),
+            model=OpenAIChat(id=model_id, temperature=0.7),
             tools=all_tools,
             description="I'm a comprehensive assistant with access to Google Drive, Slack, web fetching, Snowflake, browser automation, and Treez discount management",
             instructions=[
@@ -273,49 +284,129 @@ async def get_comprehensive_agent(agent_id: str = None, user_id: str = None, ses
                 "Handle errors gracefully and suggest alternatives when a tool fails"
             ],
             markdown=True,
-            show_tool_calls=True,
+            show_tool_calls=debug_mode,
         )
 
 
-# Alternative simpler version without MCP (if you want to test just Treez first)
-def get_treez_agent(agent_id: str = None, user_id: str = None, session_id: str = None):
+# Synchronous wrapper that matches selector's signature
+def get_comprehensive_agent_sync(
+    model_id: str = "gpt-4o",
+    agent_id: str = None, 
+    user_id: str = None, 
+    session_id: str = None,
+    debug_mode: bool = True
+):
+    """
+    Synchronous wrapper for the async agent creation.
+    This version creates a simplified agent without async MCP contexts to avoid complexity.
+    """
+    
+    # Initialize tools list
+    all_tools = []
+    
+    # Always add Treez discount management tools
+    all_tools.append(TreezDiscountTools())
+    
+    # Check if we should try to add MCP tools
+    use_full_async = os.getenv("USE_ASYNC_MCP", "false").lower() == "true"
+    
+    if use_full_async and (os.getenv("SLACK_TOKEN") or os.getenv("GOOGLE_DRIVE_TOKEN") or 
+                           os.getenv("SNOWFLAKE_MCP_URL") or os.getenv("BROWSERBASE_MCP_URL")):
+        # Use the full async version with MCP
+        import nest_asyncio
+        nest_asyncio.apply()
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            return loop.run_until_complete(
+                get_comprehensive_agent(
+                    agent_id=agent_id or "comprehensive_agent",
+                    user_id=user_id,
+                    session_id=session_id,
+                    model_id=model_id,
+                    debug_mode=debug_mode
+                )
+            )
+        except Exception as e:
+            print(f"Error creating async agent with MCP: {e}")
+            print("Falling back to simplified version...")
+        finally:
+            loop.close()
+    
+    # Simplified version without async MCP
+    # This is more reliable for initial deployment
+    return Agent(
+        agent_id=agent_id or "comprehensive_agent",
+        name="Comprehensive Multi-Tool Agent",
+        user_id=user_id,
+        session_id=session_id,
+        model=OpenAIChat(id=model_id, temperature=0.7),
+        tools=all_tools,
+        description="I'm a comprehensive assistant with Treez discount management capabilities",
+        instructions=[
+            # Treez discount instructions
+            "For discount management in Treez:",
+            "- Use get_discounts() to list all current discounts in the specified environment",
+            "- Use create_discount() to create new discounts with the following required fields:",
+            "  * discount_title: Name of the discount",
+            "  * discount_amount: Amount (number as string)",
+            "  * discount_method: Either 'DOLLAR' or 'PERCENT'",
+            "  * entity_id: The entity ID for the environment",
+            "  * organization_id: The organization ID for the environment",
+            "- Use delete_discount(discount_id) to remove a specific discount",
+            "- Optional parameters for create_discount include:",
+            "  * Coupon settings (if require_coupon=True): coupon_code, coupon_title, dates, times",
+            "  * Conditions: customer caps, purchase minimums",
+            "  * Flags: is_adjustment, is_stackable",
+            "- The default environment is 'partnersandbox3' but can be changed with the env parameter",
+            "- Always confirm successful operations and provide clear error messages if something fails",
+            
+            # General instructions
+            "Be helpful and thorough in responses",
+            "Provide clear feedback about operations performed",
+            "If an operation fails, explain what went wrong and how to fix it"
+        ],
+        markdown=True,
+        show_tool_calls=debug_mode,
+    )
+
+
+# Alternative: Create a dedicated Treez-only agent
+def get_treez_agent(
+    model_id: str = "gpt-4o",
+    agent_id: str = None, 
+    user_id: str = None, 
+    session_id: str = None,
+    debug_mode: bool = True
+):
     """Create an agent specifically for Treez discount management"""
     return Agent(
         agent_id=agent_id or "treez_agent",
         name="Treez Discount Manager",
         user_id=user_id,
         session_id=session_id,
-        model=OpenAIChat(id="gpt-4o"),
+        model=OpenAIChat(id=model_id),
         tools=[TreezDiscountTools()],
         description="I manage discounts in the Treez system",
         instructions=[
-            "I can help you manage discounts in Treez:",
-            "- Use get_discounts() to list all current discounts",
-            "- Use create_discount() to create new discounts",
-            "  Required: discount_title, discount_amount, discount_method (DOLLAR/PERCENT), entity_id, organization_id",
-            "  Optional: coupon settings, purchase conditions, customer caps",
-            "- Use delete_discount(discount_id) to remove a discount",
-            "Always verify required fields before creating discounts",
-            "Handle the env parameter (default is partnersandbox3)",
-            "Provide clear confirmation of successful operations"
+            "I specialize in managing discounts in the Treez system.",
+            "Available operations:",
+            "1. LIST DISCOUNTS: Use get_discounts(env='partnersandbox3') to show all discounts",
+            "2. CREATE DISCOUNT: Use create_discount() with required fields:",
+            "   - discount_title: Name of the discount",
+            "   - discount_amount: Amount as string (e.g., '10' for $10 or 10%)",
+            "   - discount_method: 'DOLLAR' or 'PERCENT'",
+            "   - entity_id: Entity identifier",
+            "   - organization_id: Organization identifier",
+            "3. DELETE DISCOUNT: Use delete_discount(discount_id='xxx') to remove",
+            "Optional features for discounts:",
+            "- Coupons: Set require_coupon=True and provide coupon details",
+            "- Conditions: Add customer caps or purchase minimums",
+            "- Properties: Set is_adjustment or is_stackable flags",
+            "Always verify parameters before operations and provide clear confirmations."
         ],
         markdown=True,
-        show_tool_calls=True,
+        show_tool_calls=debug_mode,
     )
-
-
-# If your API needs a synchronous version
-def get_comprehensive_agent_sync(agent_id: str = None, user_id: str = None, session_id: str = None):
-    """Synchronous wrapper for the async agent creation"""
-    import nest_asyncio
-    nest_asyncio.apply()
-    
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
-    try:
-        return loop.run_until_complete(
-            get_comprehensive_agent(agent_id, user_id, session_id)
-        )
-    finally:
-        loop.close()
