@@ -8,8 +8,12 @@ from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
-from tools.snowflake_mcp_tool import SnowflakeMCPTool
+from agno.tools.mcp import MCPTools
 from db.session import db_url
+
+SNOWFLAKE_URL = os.getenv("SNOWFLAKE_SSE_URL")
+if not SNOWFLAKE_URL:
+    raise ValueError("SNOWFLAKE_SSE_URL environment variable not set. Please set it before running.")
 
 
 def get_finance_agent(
@@ -35,7 +39,7 @@ def get_finance_agent(
                 company_info=True,
                 company_news=True,
             ),
-            SnowflakeMCPTool(),
+            MCPTools(url=SNOWFLAKE_URL),
         ],
         # Description of the agent
         description=dedent("""\
