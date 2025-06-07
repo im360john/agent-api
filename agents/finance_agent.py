@@ -8,7 +8,7 @@ from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
-
+from tools.snowflake_mcp_tool import SnowflakeMCPTool
 from db.session import db_url
 
 
@@ -35,6 +35,7 @@ def get_finance_agent(
                 company_info=True,
                 company_news=True,
             ),
+            SnowflakeMCPTool(),
         ],
         # Description of the agent
         description=dedent("""\
@@ -121,6 +122,7 @@ def get_finance_agent(
         enable_agentic_memory=True,
         # -*- Other settings -*-
         # Format responses using markdown
+        show_tool_calls=True,
         markdown=True,
         # Add the current date and time to the instructions
         add_datetime_to_instructions=True,
