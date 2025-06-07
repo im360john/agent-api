@@ -5,7 +5,7 @@ import httpx
 import json
 from agno.tools import tool
 
-class SnowflakeMCPTool(Tool):
+class SnowflakeMCPTool(tool):
     """
     A tool to connect to a Snowflake Master Control Program (MCP)
     server via a Server-Sent Events (SSE) URL, send a query,
