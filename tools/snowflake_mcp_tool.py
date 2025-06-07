@@ -3,7 +3,7 @@
 import os
 import httpx
 import json
-from agno.tools import Tool
+from agno.tools import tool
 
 class SnowflakeMCPTool(Tool):
     """
