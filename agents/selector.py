@@ -4,6 +4,7 @@ from typing import List, Optional
 from agents.agno_assist import get_agno_assist
 from agents.client import run_agent
 from agents.finance_agent import get_finance_agent
+from agents.treezlambda_agent import get_treezlambda_agent
 from agents.web_agent import get_web_agent
 
 
@@ -12,6 +13,7 @@ class AgentType(Enum):
     AGNO_ASSIST = "agno_assist"
     FINANCE_AGENT = "finance_agent"
     CLIENT_AGENT = "client_agent"
+    TREEZLAMBDA_AGENT = "treezlambda_agent"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
@@ -33,5 +35,7 @@ def get_agent(
         return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.CLIENT_AGENT:
         return run_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+    elif agent_id == AgentType.TREEZLAMBDA_AGENT:
+        return get_treezlambda_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
 
     raise ValueError(f"Agent: {agent_id} not found")
