@@ -12,9 +12,10 @@ from agents.web_agent import get_web_agent
 web_agent = get_web_agent(debug_mode=True)
 agno_assist = get_agno_assist(debug_mode=True)
 finance_agent = get_finance_agent(debug_mode=True)
+client_agent = run_agent(debug_mode=True)
 
 # Create a playground instance
-playground = Playground(agents=[web_agent, agno_assist, finance_agent])
+playground = Playground(agents=[web_agent, agno_assist, finance_agent,run_agent])
 
 # Get the router for the playground
 playground_router = playground.get_async_router()

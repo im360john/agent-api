@@ -10,7 +10,7 @@ class AgentType(Enum):
     WEB_AGENT = "web_agent"
     AGNO_ASSIST = "agno_assist"
     FINANCE_AGENT = "finance_agent"
-
+    CLIENT_AGENT = "client_agent"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
@@ -30,5 +30,8 @@ def get_agent(
         return get_agno_assist(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.FINANCE_AGENT:
         return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+    elif agent_id == AgentType.CLIENT_AGENT:
+	return run_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+
 
     raise ValueError(f"Agent: {agent_id} not found")
