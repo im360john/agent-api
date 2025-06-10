@@ -4,6 +4,8 @@ import json
 import os
 
 from agno.agent import Agent
+from agno.embedder.openai import OpenAIEmbedder
+from agno.knowledge.csv import CSVKnowledgeBase
 from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
@@ -11,8 +13,23 @@ from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.googlesheets import GoogleSheetsTools
 from agno.tools.toolkit import Toolkit
 from agno.tools.file import FileTools
+from agno.vectordb.pgvector import PgVector, SearchType
 
 from db.session import db_url
+
+
+def get_product_csv_knowledge() -> CSVKnowledgeBase:
+    """Create CSV knowledge base for product data"""
+    return CSVKnowledgeBase(
+        path="data/product_csv",  # Directory where CSV files will be stored
+        vector_db=PgVector(
+            db_url=db_url,
+            table_name="product_image_csv_knowledge",
+            search_type=SearchType.hybrid,
+            embedder=OpenAIEmbedder(id="text-embedding-3-small"),
+        ),
+        num_documents=10  # Return top 10 matches when searching
+    )
 
 
 class ProductImageSearchTools(Toolkit):
@@ -24,6 +41,7 @@ class ProductImageSearchTools(Toolkit):
         self.last_search_results = None  # Store last search results
         self.register(self.search_product_images)
         self.register(self.get_results_for_sheets)
+        self.register(self.process_csv_for_knowledge)
     
     async def search_product_images(self, brand: str, product: str, product_id: str = None, category: str = None) -> str:
         """
@@ -149,6 +167,36 @@ class ProductImageSearchTools(Toolkit):
                 rows.append(row)
         
         return rows
+    
+    async def process_csv_for_knowledge(self, csv_file_path: str) -> str:
+        """
+        Process a CSV file and add it to the knowledge base.
+        
+        Args:
+            csv_file_path: Path to the CSV file
+            
+        Returns:
+            Status message
+        """
+        import os
+        import shutil
+        
+        try:
+            # Create the data directory if it doesn't exist
+            os.makedirs("data/product_csv", exist_ok=True)
+            
+            # Copy the CSV file to the knowledge base directory
+            filename = os.path.basename(csv_file_path)
+            dest_path = os.path.join("data/product_csv", filename)
+            shutil.copy2(csv_file_path, dest_path)
+            
+            # The knowledge base will automatically pick up the new file
+            # when search_knowledge_base is called
+            
+            return f"Successfully added {filename} to the product knowledge base. You can now search for products from this file."
+            
+        except Exception as e:
+            return f"Error processing CSV file: {str(e)}"
 
 
 def get_product_image_agent(
@@ -184,6 +232,10 @@ def get_product_image_agent(
         model=OpenAIChat(id=model_id),
         # Tools available to the agent
         tools=[product_search_tools, input_sheets_tool, output_sheets_tool, file_tools],
+        # Knowledge base for CSV files
+        knowledge=get_product_csv_knowledge(),
+        # Give the agent a tool to search the knowledge base
+        search_knowledge=True,
         # Description of the agent
         description=dedent("""\
             You are a Product Image Search Agent specialized in finding product images using the Serper API.
@@ -200,6 +252,9 @@ def get_product_image_agent(
             2. **Google Sheets Input**: Read from the input sheet (ID: {input_sheet_id})
                - Columns: brand, product, product_id, category
             3. **CSV File Upload**: Process uploaded CSV files with the same column structure
+            4. **CSV Knowledge Base**: Search the knowledge base for product information
+               - Use `search_knowledge_base` to find products from previously loaded CSV files
+               - The knowledge base stores product data for quick retrieval
             
             ## Search Process:
             1. Combine brand and product name for the search query (e.g., "Wyld Gummy")
@@ -214,11 +269,18 @@ def get_product_image_agent(
                - Write to sheets with columns: brand, product, product_id, category, imageUrl, source, title
             
             ## Workflow:
-            1. Determine input source (user, sheets, or CSV)
-            2. Gather product information
-            3. Perform image search
+            1. Determine input source (user, sheets, CSV file, or knowledge base)
+            2. Gather product information:
+               - For CSV uploads: Use FileTools to read the file and process rows
+               - For knowledge base: Use search_knowledge_base to find products
+            3. Perform image search using search_product_images
             4. Ask user for output preference (chat or sheets)
             5. Format and deliver results accordingly
+            
+            ## CSV Knowledge Base Management:
+            - When users upload CSV files, they are automatically added to the knowledge base
+            - The knowledge base persists across sessions for quick product lookups
+            - CSV files should have headers: brand, product, product_id, category
             
             ## Best Practices:
             - Always use recent images (past year) for relevance
