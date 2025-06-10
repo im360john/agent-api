@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List, Optional
 
 from agents.agno_assist import get_agno_assist
+from agents.client import run_agent
 from agents.finance_agent import get_finance_agent
 from agents.web_agent import get_web_agent
 
