@@ -147,13 +147,11 @@ def get_product_image_agent(
     
     # Google Sheets tools for both input and output
     input_sheets_tool = GoogleSheetsTools(
-        spreadsheet_id=input_sheet_id,
-        name="input_sheet"
+        spreadsheet_id=input_sheet_id
     )
     
     output_sheets_tool = GoogleSheetsTools(
-        spreadsheet_id=output_sheet_id,
-        name="output_sheet"
+        spreadsheet_id=output_sheet_id
     )
     
     # File tools for CSV handling
