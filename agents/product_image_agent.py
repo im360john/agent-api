@@ -21,13 +21,13 @@ class ProductImageSearchTools(Toolkit):
     def __init__(self):
         super().__init__(name="product_image_search_tools")
         self.api_key = "7eb754e913754229bd81b68109a9e5139342c334"
+        self.last_search_results = None  # Store last search results
         self.register(self.search_product_images)
-        self.register(self.format_results_for_display)
-        self.register(self.format_results_for_sheets)
+        self.register(self.get_results_for_sheets)
     
-    async def search_product_images(self, brand: str, product: str, product_id: str = None, category: str = None) -> Dict[str, Any]:
+    async def search_product_images(self, brand: str, product: str, product_id: str = None, category: str = None) -> str:
         """
-        Search for product images using Serper API.
+        Search for product images using Serper API and return formatted results.
         
         Args:
             brand: Brand name
@@ -36,7 +36,7 @@ class ProductImageSearchTools(Toolkit):
             category: Optional category
             
         Returns:
-            Search results with image information
+            Formatted search results for display
         """
         import aiohttp
         
@@ -81,18 +81,24 @@ class ProductImageSearchTools(Toolkit):
                                 "category": category
                             })
                     
-                    return {
+                    search_results = {
                         "query": search_query,
                         "results": results,
                         "count": len(results)
                     }
+                    self.last_search_results = search_results  # Store for later use
+                    
+                    # Format and return results
+                    return self.format_results_for_display(search_results)
                     
         except Exception as e:
-            return {
-                "error": f"Error searching images: {str(e)}",
+            error_msg = f"Error searching images: {str(e)}"
+            self.last_search_results = {
+                "error": error_msg,
                 "query": search_query,
                 "results": []
             }
+            return error_msg
     
     def format_results_for_display(self, search_results: Dict[str, Any]) -> str:
         """Format search results for chat display"""
@@ -112,12 +118,25 @@ class ProductImageSearchTools(Toolkit):
         
         return output
     
-    def format_results_for_sheets(self, search_results: Dict[str, Any], num_results: int = 10) -> List[List[str]]:
-        """Format search results for Google Sheets output"""
-        rows = []
+    def get_results_for_sheets(self, num_results: int = 10) -> List[List[str]]:
+        """
+        Get the last search results formatted for Google Sheets output.
         
-        if "results" in search_results:
-            for result in search_results["results"][:num_results]:
+        Args:
+            num_results: Number of results to return (1-10)
+            
+        Returns:
+            List of rows for Google Sheets
+        """
+        if not self.last_search_results:
+            return [["No search results available. Please perform a search first."]]
+        
+        if "error" in self.last_search_results:
+            return [[self.last_search_results["error"]]]
+        
+        rows = []
+        if "results" in self.last_search_results:
+            for result in self.last_search_results["results"][:num_results]:
                 row = [
                     result.get("brand", ""),
                     result.get("product", ""),
@@ -184,14 +203,15 @@ def get_product_image_agent(
             
             ## Search Process:
             1. Combine brand and product name for the search query (e.g., "Wyld Gummy")
-            2. Use the `search_product_images` function to find images
-            3. Results include title, imageUrl, and source for up to 10 images
+            2. Use the `search_product_images` function to find and display images
+            3. Results are automatically formatted showing title, imageUrl, and source for up to 10 images
             
             ## Output Options:
-            1. **Chat Display**: Show all 10 results with title, imageUrl, and source
+            1. **Chat Display**: The search results are automatically shown when you call `search_product_images`
             2. **Google Sheets Output** (ID: {output_sheet_id}):
                - Ask user how many results they want (1-10)
-               - Create rows with columns: brand, product, product_id, category, imageUrl, source, title
+               - Use `get_results_for_sheets` to get formatted data
+               - Write to sheets with columns: brand, product, product_id, category, imageUrl, source, title
             
             ## Workflow:
             1. Determine input source (user, sheets, or CSV)
