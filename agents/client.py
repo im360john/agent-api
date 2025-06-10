@@ -42,20 +42,60 @@ class SnowflakeMCPWrapper(Toolkit):
             Query results in JSON format
         """
         try:
+            # Log the query being executed
+            if self._initialized:
+                print(f"Debug: Executing query through MCP: {query[:100]}...")
+            
             await self._ensure_initialized()
             
             # Try to find and use the read_query tool from MCP
             if self.mcp_tools and hasattr(self.mcp_tools, 'functions'):
                 for func in self.mcp_tools.functions:
                     if func.__name__ == 'read_query':
+                        print(f"Debug: Found read_query function, executing...")
                         result = await func(query=query) if asyncio.iscoroutinefunction(func) else func(query=query)
-                        return json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
+                        
+                        # Handle various response types
+                        if result is None:
+                            return "Query executed successfully but returned no results."
+                        elif isinstance(result, (dict, list)):
+                            return json.dumps(result, indent=2)
+                        elif isinstance(result, str):
+                            # Try to parse as JSON first
+                            try:
+                                parsed = json.loads(result)
+                                return json.dumps(parsed, indent=2)
+                            except:
+                                return result
+                        else:
+                            return str(result)
+            
+            # If we get here, the tool wasn't found in MCP
+            # Try to call it directly if it exists as an attribute
+            if self.mcp_tools and hasattr(self.mcp_tools, 'read_query'):
+                print(f"Debug: Calling read_query directly...")
+                result = await self.mcp_tools.read_query(query=query)
+                
+                if result is None:
+                    return "Query executed successfully but returned no results."
+                elif isinstance(result, (dict, list)):
+                    return json.dumps(result, indent=2)
+                else:
+                    return str(result)
             
             # Fallback if tool not found
-            return "Error: read_query tool not available from MCP server. Please check the connection."
+            return "Error: read_query tool not available from MCP server. The MCP connection may have failed or the server doesn't provide this tool."
             
+        except json.JSONDecodeError as e:
+            return f"Error: Invalid JSON response from server - {str(e)}. The MCP server may be returning an empty or malformed response."
         except Exception as e:
-            return f"Error executing query: {str(e)}"
+            error_msg = str(e)
+            if "EOF while parsing" in error_msg:
+                return "Error: The MCP server returned an empty response. This could indicate a connection issue or server problem."
+            elif "validation error" in error_msg:
+                return f"Error: Server response validation failed - {error_msg}. The MCP server may not be responding correctly."
+            else:
+                return f"Error executing query: {error_msg}"
         
     async def list_available_tools(self) -> str:
         """List all available MCP tools, focusing on Snowflake capabilities"""
@@ -83,14 +123,21 @@ class SnowflakeMCPWrapper(Toolkit):
         """Ensure MCP tools are initialized in async context"""
         if not self._initialized:
             try:
+                print(f"Debug: Initializing MCP tools with URL: {self.url}")
+                
                 # Initialize MCP tools with async context
                 self.mcp_tools = MCPTools(transport=self.transport, url=self.url)
                 await self.mcp_tools.__aenter__()
                 self._initialized = True
                 
-                # Register all MCP tools dynamically, but ensure read_query is available
+                print(f"Debug: MCP tools initialized successfully")
+                
+                # Check what tools are available
                 if hasattr(self.mcp_tools, 'functions'):
+                    print(f"Debug: Found {len(self.mcp_tools.functions)} functions from MCP")
                     for func in self.mcp_tools.functions:
+                        print(f"Debug: - {func.__name__}: {func.__doc__}")
+                        
                         if func.__name__ != 'read_query':  # Skip read_query as we already have it
                             # Create a wrapper for each MCP tool
                             async def make_wrapper(f):
@@ -104,11 +151,25 @@ class SnowflakeMCPWrapper(Toolkit):
                             
                             # Register the tool
                             self.register(wrapper)
+                else:
+                    print("Debug: No 'functions' attribute found on mcp_tools")
+                    
+                # Also check for direct methods
+                if hasattr(self.mcp_tools, 'read_query'):
+                    print("Debug: Found read_query as direct method on mcp_tools")
                         
             except Exception as e:
                 # Log the error but don't fail completely
-                print(f"Warning: Failed to fully initialize MCP tools: {str(e)}")
+                error_type = type(e).__name__
+                print(f"Warning: Failed to initialize MCP tools ({error_type}): {str(e)}")
+                
+                # Check if it's the specific JSON error
+                if "EOF while parsing" in str(e) or "validation error" in str(e):
+                    print("Debug: This appears to be a server connection/response issue")
+                    print("Debug: The MCP server may not be responding or may be returning empty responses")
+                
                 # Continue with limited functionality
+                self._initialized = False  # Mark as not initialized to retry later
     
     async def __aenter__(self):
         """Support async context manager"""
