@@ -26,6 +26,7 @@ class SnowflakeMCPWrapper(Toolkit):
         self.url = url
         self.mcp_tools = None
         self._initialized = False
+        self._init_attempted = False
         
         # Register the primary Snowflake query tool
         self.register(self.read_query)
@@ -51,7 +52,10 @@ class SnowflakeMCPWrapper(Toolkit):
             # Try to find and use the read_query tool from MCP
             if self.mcp_tools and hasattr(self.mcp_tools, 'functions'):
                 for func in self.mcp_tools.functions:
-                    if func.__name__ == 'read_query':
+                    # Handle different types of function entries
+                    if isinstance(func, str):
+                        continue
+                    elif hasattr(func, '__name__') and func.__name__ == 'read_query':
                         print(f"Debug: Found read_query function, executing...")
                         result = await func(query=query) if asyncio.iscoroutinefunction(func) else func(query=query)
                         
@@ -83,8 +87,36 @@ class SnowflakeMCPWrapper(Toolkit):
                 else:
                     return str(result)
             
-            # Fallback if tool not found
-            return "Error: read_query tool not available from MCP server. The MCP connection may have failed or the server doesn't provide this tool."
+            # If all else fails, try to send the query through any available method
+            if self.mcp_tools:
+                try:
+                    # Try to use the tool invocation method if available
+                    if hasattr(self.mcp_tools, 'invoke_tool'):
+                        print("Debug: Trying invoke_tool method...")
+                        result = await self.mcp_tools.invoke_tool('read_query', query=query)
+                        return json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
+                    
+                    # Try to call a generic execute method
+                    if hasattr(self.mcp_tools, 'execute'):
+                        print("Debug: Trying execute method...")
+                        result = await self.mcp_tools.execute('read_query', query=query)
+                        return json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
+                except Exception as e:
+                    print(f"Debug: Alternative method failed: {e}")
+            
+            # Final fallback
+            return """Error: Unable to execute query through MCP server.
+            
+The MCP connection appears to be having issues. Possible causes:
+1. The MCP server is not responding
+2. Authentication/authorization issues
+3. The server URL may be incorrect or the service is down
+4. The read_query tool is not available on this MCP server
+
+Please verify:
+- The MCP server URL is correct
+- The server is running and accessible
+- You have the necessary permissions to use the read_query tool"""
             
         except json.JSONDecodeError as e:
             return f"Error: Invalid JSON response from server - {str(e)}. The MCP server may be returning an empty or malformed response."
@@ -121,7 +153,8 @@ class SnowflakeMCPWrapper(Toolkit):
         
     async def _ensure_initialized(self):
         """Ensure MCP tools are initialized in async context"""
-        if not self._initialized:
+        if not self._initialized and not self._init_attempted:
+            self._init_attempted = True
             try:
                 print(f"Debug: Initializing MCP tools with URL: {self.url}")
                 
@@ -136,23 +169,37 @@ class SnowflakeMCPWrapper(Toolkit):
                 if hasattr(self.mcp_tools, 'functions'):
                     print(f"Debug: Found {len(self.mcp_tools.functions)} functions from MCP")
                     for func in self.mcp_tools.functions:
-                        print(f"Debug: - {func.__name__}: {func.__doc__}")
-                        
-                        if func.__name__ != 'read_query':  # Skip read_query as we already have it
-                            # Create a wrapper for each MCP tool
-                            async def make_wrapper(f):
-                                async def tool_wrapper(**kwargs):
-                                    return await f(**kwargs) if asyncio.iscoroutinefunction(f) else f(**kwargs)
-                                return tool_wrapper
+                        # Check if func is actually a callable or just a string/dict
+                        if isinstance(func, str):
+                            print(f"Debug: - Function entry is a string: {func}")
+                            continue
+                        elif isinstance(func, dict):
+                            print(f"Debug: - Function entry is a dict: {func}")
+                            continue
+                        elif hasattr(func, '__name__'):
+                            print(f"Debug: - {func.__name__}: {getattr(func, '__doc__', 'No doc')}")
                             
-                            wrapper = await make_wrapper(func)
-                            wrapper.__name__ = func.__name__
-                            wrapper.__doc__ = func.__doc__
-                            
-                            # Register the tool
-                            self.register(wrapper)
+                            if func.__name__ != 'read_query':  # Skip read_query as we already have it
+                                # Create a wrapper for each MCP tool
+                                async def make_wrapper(f):
+                                    async def tool_wrapper(**kwargs):
+                                        return await f(**kwargs) if asyncio.iscoroutinefunction(f) else f(**kwargs)
+                                    return tool_wrapper
+                                
+                                wrapper = await make_wrapper(func)
+                                wrapper.__name__ = func.__name__
+                                wrapper.__doc__ = getattr(func, '__doc__', '')
+                                
+                                # Register the tool
+                                self.register(wrapper)
+                        else:
+                            print(f"Debug: - Unknown function type: {type(func)} - {func}")
                 else:
                     print("Debug: No 'functions' attribute found on mcp_tools")
+                    
+                # Try to inspect mcp_tools structure
+                print(f"Debug: mcp_tools type: {type(self.mcp_tools)}")
+                print(f"Debug: mcp_tools attributes: {[attr for attr in dir(self.mcp_tools) if not attr.startswith('_')]}")
                     
                 # Also check for direct methods
                 if hasattr(self.mcp_tools, 'read_query'):
