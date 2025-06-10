@@ -1,6 +1,7 @@
 import asyncio
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any, Optional, Dict
+import json
 
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
@@ -16,26 +17,67 @@ from db.session import db_url
 server_url = "https://snowflake-mcp-backend.onrender.com/mcp/c9cda771-0dbf-4637-90ed-b9cf9c975098/sse"
 
 
-class AsyncMCPToolsWrapper(Toolkit):
-    """Wrapper for MCP tools that handles async initialization"""
+class SnowflakeMCPWrapper(Toolkit):
+    """Wrapper for Snowflake MCP tools with focus on SQL query capabilities"""
     
     def __init__(self, transport: str = "sse", url: str = None):
-        super().__init__(name="async_mcp_wrapper")
+        super().__init__(name="snowflake_mcp_wrapper")
         self.transport = transport
         self.url = url
         self.mcp_tools = None
         self._initialized = False
         
-        # Register a placeholder tool that will be replaced once MCP connects
-        self.register(self._list_available_tools)
+        # Register the primary Snowflake query tool
+        self.register(self.read_query)
+        self.register(self.list_available_tools)
         
-    async def _list_available_tools(self) -> str:
-        """List all available MCP tools"""
-        await self._ensure_initialized()
-        if self.mcp_tools and hasattr(self.mcp_tools, 'functions'):
-            tools = [f"- {func.__name__}: {func.__doc__ or 'No description'}" for func in self.mcp_tools.functions]
-            return "Available MCP tools:\n" + "\n".join(tools) if tools else "No tools available from MCP server"
-        return "MCP tools not initialized"
+    async def read_query(self, query: str) -> str:
+        """
+        Execute a SQL query on Snowflake database.
+        
+        Args:
+            query: SQL query to execute (e.g., "SELECT * FROM customers LIMIT 10")
+            
+        Returns:
+            Query results in JSON format
+        """
+        try:
+            await self._ensure_initialized()
+            
+            # Try to find and use the read_query tool from MCP
+            if self.mcp_tools and hasattr(self.mcp_tools, 'functions'):
+                for func in self.mcp_tools.functions:
+                    if func.__name__ == 'read_query':
+                        result = await func(query=query) if asyncio.iscoroutinefunction(func) else func(query=query)
+                        return json.dumps(result, indent=2) if isinstance(result, (dict, list)) else str(result)
+            
+            # Fallback if tool not found
+            return "Error: read_query tool not available from MCP server. Please check the connection."
+            
+        except Exception as e:
+            return f"Error executing query: {str(e)}"
+        
+    async def list_available_tools(self) -> str:
+        """List all available MCP tools, focusing on Snowflake capabilities"""
+        try:
+            await self._ensure_initialized()
+            
+            if self.mcp_tools and hasattr(self.mcp_tools, 'functions'):
+                tools_info = []
+                for func in self.mcp_tools.functions:
+                    name = func.__name__
+                    doc = func.__doc__ or 'No description available'
+                    tools_info.append(f"- **{name}**: {doc}")
+                
+                if tools_info:
+                    return "Available Snowflake MCP tools:\n\n" + "\n".join(tools_info)
+                else:
+                    return "No tools available from MCP server"
+            
+            return "MCP tools not initialized. The primary tool available is:\n- **read_query**: Execute SQL queries on Snowflake database"
+            
+        except Exception as e:
+            return f"Note: MCP connection issue ({str(e)}). The primary tool available is:\n- **read_query**: Execute SQL queries on Snowflake database"
         
     async def _ensure_initialized(self):
         """Ensure MCP tools are initialized in async context"""
@@ -46,22 +88,27 @@ class AsyncMCPToolsWrapper(Toolkit):
                 await self.mcp_tools.__aenter__()
                 self._initialized = True
                 
-                # Register all MCP tools dynamically
+                # Register all MCP tools dynamically, but ensure read_query is available
                 if hasattr(self.mcp_tools, 'functions'):
                     for func in self.mcp_tools.functions:
-                        # Create a wrapper for each MCP tool
-                        async def tool_wrapper(**kwargs):
-                            return await func(**kwargs) if asyncio.iscoroutinefunction(func) else func(**kwargs)
-                        
-                        # Set the wrapper's name and docstring
-                        tool_wrapper.__name__ = func.__name__
-                        tool_wrapper.__doc__ = func.__doc__
-                        
-                        # Register the tool
-                        self.register(tool_wrapper)
+                        if func.__name__ != 'read_query':  # Skip read_query as we already have it
+                            # Create a wrapper for each MCP tool
+                            async def make_wrapper(f):
+                                async def tool_wrapper(**kwargs):
+                                    return await f(**kwargs) if asyncio.iscoroutinefunction(f) else f(**kwargs)
+                                return tool_wrapper
+                            
+                            wrapper = await make_wrapper(func)
+                            wrapper.__name__ = func.__name__
+                            wrapper.__doc__ = func.__doc__
+                            
+                            # Register the tool
+                            self.register(wrapper)
                         
             except Exception as e:
-                raise RuntimeError(f"Failed to initialize MCP tools: {str(e)}")
+                # Log the error but don't fail completely
+                print(f"Warning: Failed to fully initialize MCP tools: {str(e)}")
+                # Continue with limited functionality
     
     async def __aenter__(self):
         """Support async context manager"""
@@ -71,7 +118,10 @@ class AsyncMCPToolsWrapper(Toolkit):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Clean up MCP tools on exit"""
         if self.mcp_tools and self._initialized:
-            await self.mcp_tools.__aexit__(exc_type, exc_val, exc_tb)
+            try:
+                await self.mcp_tools.__aexit__(exc_type, exc_val, exc_tb)
+            except:
+                pass  # Ignore cleanup errors
             self._initialized = False
 
 
@@ -81,39 +131,56 @@ def get_client_agent(
     session_id: Optional[str] = None,
     debug_mode: bool = True,
 ) -> Agent:
-    # Create our async wrapper for MCP tools
-    mcp_wrapper = AsyncMCPToolsWrapper(transport="sse", url=server_url)
+    # Create our Snowflake MCP wrapper
+    snowflake_wrapper = SnowflakeMCPWrapper(transport="sse", url=server_url)
     
     return Agent(
-        name="Client Agent",
+        name="Snowflake SQL Agent",
         agent_id="client_agent",
         user_id=user_id,
         session_id=session_id,
         model=OpenAIChat(id=model_id),
         # Tools available to the agent
-        tools=[mcp_wrapper],
+        tools=[snowflake_wrapper],
         # Description of the agent
         description=dedent("""\
-            You are a Client Agent with access to MCP (Model Context Protocol) tools via Snowflake.
+            You are a Snowflake SQL Agent with direct access to query Snowflake databases.
             
-            Your goal is to assist users by leveraging the capabilities provided by the MCP server.
+            Your primary capability is executing SQL queries against Snowflake data warehouses to help users analyze data,
+            generate reports, and answer data-related questions.
         """),
         # Instructions for the agent
         instructions=dedent("""\
-            As a Client Agent, you have access to MCP tools that provide specialized capabilities through the Snowflake MCP server.
+            As a Snowflake SQL Agent, you have access to execute SQL queries on Snowflake databases through the MCP server.
             
-            Start by using the `_list_available_tools` function to see what MCP tools are available from the server.
-            The MCP tools will be dynamically loaded when you first interact with them.
+            Your primary tool is `read_query` which allows you to run SQL queries and retrieve results.
             
-            Use these tools effectively to help users with their requests. The MCP server may provide various functionalities
-            depending on its configuration.
+            When helping users:
+            1. **Understanding Requirements**: First understand what data the user needs
+            2. **Query Construction**: Write efficient SQL queries to retrieve the requested data
+            3. **Data Analysis**: Help interpret the results and provide insights
             
-            When interacting with the MCP tools:
-            - First list available tools to understand what's available
-            - Be clear about what capabilities are available
-            - Handle any errors gracefully
-            - Provide helpful feedback about the operations performed
-            - Note that MCP tools may take a moment to initialize on first use
+            Best practices for SQL queries:
+            - Always use LIMIT clauses for initial data exploration
+            - Write clear, well-formatted SQL with proper indentation
+            - Use appropriate JOINs when combining data from multiple tables
+            - Consider query performance and avoid full table scans when possible
+            - Explain what your queries do before executing them
+            
+            Example queries you can help with:
+            - SELECT statements to retrieve data
+            - Aggregations with GROUP BY
+            - JOIN operations between tables
+            - Window functions for advanced analytics
+            - CTEs (Common Table Expressions) for complex queries
+            
+            When errors occur:
+            - Check SQL syntax carefully
+            - Verify table and column names
+            - Consider data types and casting if needed
+            - Provide helpful error explanations to users
+            
+            You can also use `list_available_tools` to see all available MCP tools, though `read_query` is your primary function.
             
             Additional Information:
             - You are interacting with the user_id: {current_user_id}
