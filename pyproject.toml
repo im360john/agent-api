@@ -7,6 +7,7 @@ authors = [{ name = "Agno", email = "hello@agno.com" }]
 
 dependencies = [
   "agno==1.4.6",
+  "aiofiles",
   "aiohttp",
   "duckduckgo-search",
   "fastapi[standard]",
