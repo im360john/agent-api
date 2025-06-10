@@ -10,7 +10,6 @@ from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
-from agno.tools.googlesheets import GoogleSheetsTools
 from agno.tools.toolkit import Toolkit
 from agno.tools.file import FileTools
 from agno.vectordb.pgvector import PgVector, SearchType
@@ -41,7 +40,10 @@ class ProductImageSearchTools(Toolkit):
         self.last_search_results = None  # Store last search results
         self.register(self.search_product_images)
         self.register(self.get_results_for_sheets)
+        self.register(self.format_for_sheets_paste)
+        self.register(self.save_results_as_csv)
         self.register(self.process_csv_for_knowledge)
+        self.register(self.read_public_google_sheet)
     
     async def search_product_images(self, brand: str, product: str, product_id: str = None, category: str = None) -> str:
         """
@@ -168,6 +170,89 @@ class ProductImageSearchTools(Toolkit):
         
         return rows
     
+    def format_for_sheets_paste(self, num_results: int = 10) -> str:
+        """
+        Format the last search results as tab-separated values for easy pasting into Google Sheets.
+        
+        Args:
+            num_results: Number of results to include (1-10)
+            
+        Returns:
+            Tab-separated values that can be copied and pasted into Google Sheets
+        """
+        if not self.last_search_results:
+            return "No search results available. Please perform a search first."
+        
+        if "error" in self.last_search_results:
+            return self.last_search_results["error"]
+        
+        # Create header row
+        output = "Brand\tProduct\tProduct ID\tCategory\tImage URL\tSource\tTitle\n"
+        
+        # Add data rows
+        if "results" in self.last_search_results:
+            for result in self.last_search_results["results"][:num_results]:
+                row = [
+                    result.get("brand", ""),
+                    result.get("product", ""),
+                    result.get("product_id", ""),
+                    result.get("category", ""),
+                    result.get("imageUrl", ""),
+                    result.get("source", ""),
+                    result.get("title", "")
+                ]
+                output += "\t".join(row) + "\n"
+        
+        return output
+    
+    def save_results_as_csv(self, num_results: int = 10, filename: str = "product_image_results.csv") -> str:
+        """
+        Save the last search results as a CSV file.
+        
+        Args:
+            num_results: Number of results to include (1-10)
+            filename: Name for the output CSV file
+            
+        Returns:
+            Path to the saved CSV file or error message
+        """
+        import csv
+        import os
+        
+        if not self.last_search_results:
+            return "No search results available. Please perform a search first."
+        
+        if "error" in self.last_search_results:
+            return self.last_search_results["error"]
+        
+        try:
+            # Create output directory if it doesn't exist
+            os.makedirs("output", exist_ok=True)
+            filepath = os.path.join("output", filename)
+            
+            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = ['Brand', 'Product', 'Product ID', 'Category', 'Image URL', 'Source', 'Title']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                
+                writer.writeheader()
+                
+                if "results" in self.last_search_results:
+                    for result in self.last_search_results["results"][:num_results]:
+                        writer.writerow({
+                            'Brand': result.get("brand", ""),
+                            'Product': result.get("product", ""),
+                            'Product ID': result.get("product_id", ""),
+                            'Category': result.get("category", ""),
+                            'Image URL': result.get("imageUrl", ""),
+                            'Source': result.get("source", ""),
+                            'Title': result.get("title", "")
+                        })
+            
+            return f"Results saved to: {filepath}\nYou can download this file and import it into Google Sheets."
+            
+        except Exception as e:
+            return f"Error saving CSV file: {str(e)}"
+    
     async def process_csv_for_knowledge(self, csv_file_path: str) -> str:
         """
         Process a CSV file and add it to the knowledge base.
@@ -197,6 +282,47 @@ class ProductImageSearchTools(Toolkit):
             
         except Exception as e:
             return f"Error processing CSV file: {str(e)}"
+    
+    async def read_public_google_sheet(self, sheet_id: str, range_name: str = "A:Z") -> List[Dict[str, str]]:
+        """
+        Read data from a public Google Sheet using CSV export.
+        
+        Args:
+            sheet_id: Google Sheet ID
+            range_name: Sheet range (default reads all columns)
+            
+        Returns:
+            List of dictionaries with sheet data
+        """
+        import aiohttp
+        import csv
+        import io
+        
+        try:
+            # Construct the CSV export URL for public Google Sheets
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(export_url) as response:
+                    if response.status != 200:
+                        return [{"error": f"Failed to fetch sheet. Status: {response.status}"}]
+                    
+                    text = await response.text()
+                    
+                    # Parse CSV data
+                    csv_reader = csv.DictReader(io.StringIO(text))
+                    rows = []
+                    
+                    for row in csv_reader:
+                        # Clean up the data
+                        cleaned_row = {k.strip(): v.strip() for k, v in row.items() if k and v}
+                        if cleaned_row:
+                            rows.append(cleaned_row)
+                    
+                    return rows
+                    
+        except Exception as e:
+            return [{"error": f"Error reading Google Sheet: {str(e)}"}]
 
 
 def get_product_image_agent(
@@ -212,15 +338,6 @@ def get_product_image_agent(
     # Create tools
     product_search_tools = ProductImageSearchTools()
     
-    # Google Sheets tools for both input and output
-    input_sheets_tool = GoogleSheetsTools(
-        spreadsheet_id=input_sheet_id
-    )
-    
-    output_sheets_tool = GoogleSheetsTools(
-        spreadsheet_id=output_sheet_id
-    )
-    
     # File tools for CSV handling
     file_tools = FileTools()
     
@@ -231,7 +348,7 @@ def get_product_image_agent(
         session_id=session_id,
         model=OpenAIChat(id=model_id),
         # Tools available to the agent
-        tools=[product_search_tools, input_sheets_tool, output_sheets_tool, file_tools],
+        tools=[product_search_tools, file_tools],
         # Knowledge base for CSV files
         knowledge=get_product_csv_knowledge(),
         # Give the agent a tool to search the knowledge base
@@ -249,8 +366,10 @@ def get_product_image_agent(
             
             ## Input Methods:
             1. **Direct User Input**: Ask for brand, product name, and optionally product_id and category
-            2. **Google Sheets Input**: Read from the input sheet (ID: {input_sheet_id})
-               - Columns: brand, product, product_id, category
+            2. **Google Sheets Input**: Read from public sheets using `read_public_google_sheet`
+               - Input sheet ID: {input_sheet_id}
+               - Expected columns: brand, product, product_id, category
+               - No authentication required for public sheets
             3. **CSV File Upload**: Process uploaded CSV files with the same column structure
             4. **CSV Knowledge Base**: Search the knowledge base for product information
                - Use `search_knowledge_base` to find products from previously loaded CSV files
@@ -263,10 +382,13 @@ def get_product_image_agent(
             
             ## Output Options:
             1. **Chat Display**: The search results are automatically shown when you call `search_product_images`
-            2. **Google Sheets Output** (ID: {output_sheet_id}):
+            2. **Google Sheets Output** (Target sheet ID: {output_sheet_id}):
                - Ask user how many results they want (1-10)
-               - Use `get_results_for_sheets` to get formatted data
-               - Write to sheets with columns: brand, product, product_id, category, imageUrl, source, title
+               - Option A: Use `format_for_sheets_paste` to get tab-separated values
+                 - Users can copy the output and paste directly into Google Sheets
+               - Option B: Use `save_results_as_csv` to create a CSV file
+                 - Users can download the file and import it into Google Sheets
+               - Columns: brand, product, product_id, category, imageUrl, source, title
             
             ## Workflow:
             1. Determine input source (user, sheets, CSV file, or knowledge base)
