@@ -8,7 +8,7 @@ from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
 from agno.storage.agent.postgres import PostgresAgentStorage
-from agno.tools.serperapi import SerperApiTools
+from agno.tools.serpapi import SerpApiTools
 from agno.tools.googlesheets import GoogleSheetsTools
 from agno.tools.toolkit import Toolkit
 from agno.tools.file import FileTools
