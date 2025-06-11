@@ -6,7 +6,7 @@ from agents.finance_agent import get_finance_agent
 from agents.product_image_agent import get_product_image_agent
 from agents.treezlambda_agent import get_treezlambda_agent
 from agents.web_agent import get_web_agent
-from agents.image_evaluator_agent import image_evaluator_agent
+from agents.image_evaluator_agent import get_image_evaluator_agent
 
 ######################################################
 ## Routes for the Playground Interface
@@ -19,6 +19,7 @@ finance_agent = get_finance_agent(debug_mode=True)
 treezlambda_agent = get_treezlambda_agent(debug_mode=True)
 product_image_agent = get_product_image_agent(debug_mode=True)
 client_agent = run_agent(debug_mode=True)
+image_evaluator_agent = get_image_evaluator_agent(debug_mode=True)
 
 # Create a playground instance
 playground = Playground(agents=[web_agent, agno_assist, finance_agent, treezlambda_agent, product_image_agent, client_agent, image_evaluator_agent])
