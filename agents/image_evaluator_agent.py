@@ -471,10 +471,12 @@ def get_image_evaluator_agent(
         """),
         # Enable memory storage
         memory=Memory(
-            db=PostgresMemoryDb(db_url=db_url),
-            store=True,
-            use_tools=True,
+            model=OpenAIChat(id=model_id),
+            db=PostgresMemoryDb(table_name="image_evaluator_memories", db_url=db_url),
+            delete_memories=True,
+            clear_memories=True,
         ),
+        enable_agentic_memory=True,
         # Enable persistent storage
         storage=PostgresAgentStorage(table_name="image_evaluator_agent_sessions", db_url=db_url),
         # Show tool calls in output
