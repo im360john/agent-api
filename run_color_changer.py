@@ -47,6 +47,10 @@ async def test_tools_directly():
     # Sample image for testing
     sample_image = "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=400"
     
+    print(f"\nSample image available: {sample_image}")
+    print("\nTIP: For color replacement, use format: 255,0,0 (no parentheses)")
+    print("     Example - White to black: source=255,255,255 target=0,0,0")
+    
     while True:
         choice = input("\nSelect tool to test (1-9): ")
         
@@ -66,8 +70,9 @@ async def test_tools_directly():
             
         elif choice == "3":
             url = input(f"Enter image URL (or press Enter for sample): ") or sample_image
-            source = input("Enter source color (R,G,B): ")
-            target = input("Enter target color (R,G,B): ")
+            print("Color format: R,G,B (e.g., 255,255,255 for white)")
+            source = input("Enter source color: ")
+            target = input("Enter target color: ")
             tolerance = int(input("Enter tolerance (default 30): ") or "30")
             save_path = input("Save to path (or press Enter to skip): ") or None
             print("\nReplacing color...")

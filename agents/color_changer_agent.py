@@ -274,9 +274,25 @@ class ColorChangerTools(Toolkit):
             from PIL import Image
             import numpy as np
             
-            # Parse colors
-            source_rgb = tuple(map(int, source_color.split(',')))
-            target_rgb = tuple(map(int, target_color.split(',')))
+            # Parse colors - handle both "R,G,B" and "(R,G,B)" formats
+            source_color_clean = source_color.strip().strip('()')
+            target_color_clean = target_color.strip().strip('()')
+            
+            try:
+                source_rgb = tuple(map(int, source_color_clean.split(',')))
+                target_rgb = tuple(map(int, target_color_clean.split(',')))
+                
+                # Validate RGB values
+                for val in source_rgb + target_rgb:
+                    if not 0 <= val <= 255:
+                        return json.dumps({"error": "RGB values must be between 0 and 255"})
+                        
+            except ValueError:
+                return json.dumps({
+                    "error": "Invalid color format. Please use R,G,B format (e.g., 255,0,0 for red)",
+                    "source_input": source_color,
+                    "target_input": target_color
+                })
             
             # Download image
             async with aiohttp.ClientSession() as session:

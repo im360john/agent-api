@@ -1,6 +1,6 @@
 import asyncio
 from textwrap import dedent
-from typing import Any, Optional, Dict
+from typing import Optional
 import json
 
 from agno.agent import Agent
@@ -56,7 +56,7 @@ class SnowflakeMCPWrapper(Toolkit):
                     if isinstance(func, str):
                         continue
                     elif hasattr(func, '__name__') and func.__name__ == 'read_query':
-                        print(f"Debug: Found read_query function, executing...")
+                        print("Debug: Found read_query function, executing...")
                         result = await func(query=query) if asyncio.iscoroutinefunction(func) else func(query=query)
                         
                         # Handle various response types
@@ -69,7 +69,7 @@ class SnowflakeMCPWrapper(Toolkit):
                             try:
                                 parsed = json.loads(result)
                                 return json.dumps(parsed, indent=2)
-                            except:
+                            except (json.JSONDecodeError, TypeError):
                                 return result
                         else:
                             return str(result)
@@ -77,7 +77,7 @@ class SnowflakeMCPWrapper(Toolkit):
             # If we get here, the tool wasn't found in MCP
             # Try to call it directly if it exists as an attribute
             if self.mcp_tools and hasattr(self.mcp_tools, 'read_query'):
-                print(f"Debug: Calling read_query directly...")
+                print("Debug: Calling read_query directly...")
                 result = await self.mcp_tools.read_query(query=query)
                 
                 if result is None:
@@ -163,7 +163,7 @@ Please verify:
                 await self.mcp_tools.__aenter__()
                 self._initialized = True
                 
-                print(f"Debug: MCP tools initialized successfully")
+                print("Debug: MCP tools initialized successfully")
                 
                 # Check what tools are available
                 if hasattr(self.mcp_tools, 'functions'):
@@ -228,7 +228,7 @@ Please verify:
         if self.mcp_tools and self._initialized:
             try:
                 await self.mcp_tools.__aexit__(exc_type, exc_val, exc_tb)
-            except:
+            except Exception:
                 pass  # Ignore cleanup errors
             self._initialized = False
 

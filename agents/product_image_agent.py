@@ -1,6 +1,5 @@
 from textwrap import dedent
 from typing import Optional, List, Dict, Any
-import json
 import os
 
 from agno.agent import Agent
@@ -217,7 +216,6 @@ class ProductImageSearchTools(Toolkit):
             Path to the saved CSV file or error message
         """
         import csv
-        import os
         
         if not self.last_search_results:
             return "No search results available. Please perform a search first."
@@ -263,7 +261,6 @@ class ProductImageSearchTools(Toolkit):
         Returns:
             Status message
         """
-        import os
         import shutil
         
         try:
