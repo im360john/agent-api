@@ -19,6 +19,9 @@ dependencies = [
   "psycopg[binary]",
   "sqlalchemy",
   "yfinance",
+  "pillow",
+  "numpy",
+  "scikit-image",
 ]
 
 [project.optional-dependencies]

@@ -7,6 +7,7 @@ from agents.finance_agent import get_finance_agent
 from agents.product_image_agent import get_product_image_agent
 from agents.treezlambda_agent import get_treezlambda_agent
 from agents.web_agent import get_web_agent
+from agents.image_evaluator_agent import image_evaluator_agent
 
 
 class AgentType(Enum):
@@ -16,6 +17,7 @@ class AgentType(Enum):
     CLIENT_AGENT = "client_agent"
     TREEZLAMBDA_AGENT = "treezlambda_agent"
     PRODUCT_IMAGE_AGENT = "product_image_agent"
+    IMAGE_EVALUATOR = "image_evaluator"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
@@ -41,5 +43,7 @@ def get_agent(
         return get_treezlambda_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.PRODUCT_IMAGE_AGENT:
         return get_product_image_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+    elif agent_id == AgentType.IMAGE_EVALUATOR:
+        return image_evaluator_agent
 
     raise ValueError(f"Agent: {agent_id} not found")
