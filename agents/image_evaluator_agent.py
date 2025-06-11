@@ -83,43 +83,62 @@ class ImageEvaluatorTools(Toolkit):
             CRITICAL: If you can't read a brand name = MAX 30!
             
             PROFESSIONAL PRODUCT PHOTO (Score 50-70):
-            ⚪ White background BUT real brand visible
+            ⚪ White/clean background BUT real brand visible
             ⚪ E-commerce style BUT authentic product
             ⚪ Clear packaging with product details
             ⚪ Brand name + product type visible
             
-            HIGH-VALUE INDICATORS (Add points):
-            ✅ BRAND NAME visible (+20)
+            🏆 IDEAL PRODUCT PHOTO (Score 75-90):
+            ✨ Professional composition with multiple elements
+            ✨ Shows BOTH packaging AND inner product
+            ✨ Clear, bold brand visibility
+            ✨ Product name/strain clearly defined
+            ✨ Clean, intentional layout
+            ✨ High-resolution with sharp details
+            ✨ Multiple angles or product states shown
+            
+            HIGH-VALUE INDICATORS (Add points from base):
+            ✅ BRAND NAME visible (+20 from base)
             ✅ PRODUCT/STRAIN NAME (+15)
-            ✅ THC/CBD percentages (+15)
-            ✅ Real setting/surface (+10)
-            ✅ Multiple products (+5)
+            ✅ Shows inner product + packaging (+20)
+            ✅ THC/CBD percentages (+10)
+            ✅ Professional studio quality (+10)
+            ✅ Multiple products/angles (+10)
+            ✅ Real setting/surface (+5)
+            
+            SCORING TIERS:
+            0-10: Not cannabis
+            10-30: Generic/stock with no brand
+            30-50: Basic product shot, minimal info
+            50-70: Professional with brand/details
+            75-90: IDEAL - Multiple elements, packaging + product
+            90-95: Dispensary/retail environment
+            95-100: Perfect authenticity (rare)
             
             SCORING LOGIC:
             1. Is it cannabis? No = 0-10
             2. Is it flower? Yes = 45-75 based on quality
             3. Is it generic with no details? Yes = 10-30
-            4. Does it have brand/product info? Yes = 50+
+            4. Does it have brand/product info? Yes = Start at 50
+            5. Does it show packaging + inner product? Add +20-25
+            6. Is composition professional/intentional? Add +10-15
             
             EXAMPLES:
             - Non-cannabis item = 0-10
             - Generic vape, no brand = 10-30
             - Cannabis flower, good quality = 45-60
-            - Real product with brand = 50-70
-            - Dispensary setting = 70-95
-            
-            SPECIFIC EXAMPLES:
-            - Product on white background with drop shadow = 30-40
-            - Product on dispensary counter with other items = 80-90
+            - Basic product with brand = 50-70
+            - Product + packaging + details = 75-90
+            - Dispensary setting = 85-95
             
             Analyze the image and provide:
             1. List ALL red flags you see
             2. List ALL authentic indicators you see
-            3. Final score based on the count
-            4. One sentence summary
+            3. Count indicators and calculate score
+            4. Final score with clear justification
+            5. One sentence summary
             
-            BE CRITICAL. Most product photos on brand websites are stock-style (score 30-50).
-            Only real dispensary photos should score above 70.
+            Remember: Professional product photography for legitimate brands CAN score 75-90 if it shows multiple elements effectively.
         """)
         
         return json.dumps({
@@ -148,28 +167,39 @@ class ImageEvaluatorTools(Toolkit):
             
             1. Is this a cannabis product? (NO = Score 0-10)
             2. Is this cannabis FLOWER/BUDS? (YES = Special scoring 45-75)
-            3. Can you see a BRAND NAME? (YES = +20 points from base 40)
+            3. Can you see a BRAND NAME? (YES = Base 50 minimum)
             4. Is there a PRODUCT/STRAIN NAME? (YES = +15 points)
-            5. Is it generic with NO identifying details? (YES = Max score 30)
+            5. Does it show BOTH packaging AND inner product? (YES = +20-25 points)
+            6. Is composition professional with multiple elements? (YES = Consider 75-90 range)
             
             SPECIAL SCORING:
             - NOT cannabis = 0-10
             - Cannabis FLOWER (no packaging expected) = 45-60
             - Generic product, no brand = 10-30
-            - Real product with brand = 50-70
-            - Product in real setting = 70-95
+            - Real product with brand only = 50-70
+            - IDEAL: Package + product + details = 75-90
+            - Product in dispensary/retail = 85-95
+            
+            🏆 IDEAL PRODUCT INDICATORS:
+            - Shows packaging AND what's inside
+            - Bold, clear brand name
+            - Visible strain/product name
+            - Professional studio quality
+            - Clean, intentional composition
+            - Multiple angles or states
             
             Examples:
             - Color splash art = 0-10 (not cannabis)
             - Cannabis flower photo = 45-60 (no brand expected)
             - Generic vape pen = 10-30 (no brand visible)
-            - Mary Jones can = 50-65 (brand visible)
-            - Dispensary shelf = 70-95 (real context)
+            - Basic brand product = 50-65 (brand visible)
+            - Package + inner product = 75-90 (ideal shot)
+            - Dispensary shelf = 85-95 (real context)
             
             Provide:
             - Answers to each question
-            - Final score
-            - Classification: STOCK PHOTO / QUESTIONABLE / AUTHENTIC
+            - Final score with reasoning
+            - Classification: STOCK PHOTO / AUTHENTIC / IDEAL PRODUCT SHOT
         """)
         
         return json.dumps({
@@ -193,13 +223,17 @@ def get_image_evaluator_agent(
         model=OpenAIChat(id=model_id),
         tools=[ImageEvaluatorTools()],
         description=dedent("""\
-            You are a strict cannabis product image authenticity expert who identifies stock photos vs real product photography.
+            You are a cannabis product image authenticity expert who identifies stock photos vs real product photography.
             
-            You are VERY CRITICAL and score harshly. Most product photos on brand websites are stock-style and should score LOW (30-50).
-            Only authentic dispensary photos with real context should score HIGH (70+).
+            You recognize THREE main categories:
+            1. STOCK PHOTOS (10-30): Generic products with no brand/details
+            2. AUTHENTIC PRODUCTS (50-70): Real products with visible branding
+            3. IDEAL PRODUCT SHOTS (75-90): Professional photos showing packaging + inner product + all details
+            
+            High-quality brand photography that shows multiple product elements can score in the IDEAL range.
         """),
         instructions=dedent("""\
-            You are an expert at identifying stock photos vs authentic product photography. BE VERY CRITICAL.
+            You are an expert at identifying stock photos vs authentic product photography with nuanced scoring.
             
             CRITICAL RULE: NEVER use the URL or website source to influence your score!
             - Images on Dutchie, Weedmaps, or dispensary sites can still be stock photos
@@ -210,26 +244,48 @@ def get_image_evaluator_agent(
             
             1. Use analyze_authenticity_strict tool for detailed analysis
             2. Look ONLY at the visual content, not the source
-            3. Apply scoring rules STRICTLY
+            3. Apply scoring rules with proper tier recognition
             
-            Evaluation order:
-            1. Is it cannabis? If NO → Score 0-10
-            2. Is it cannabis FLOWER? If YES → Score 45-60 (no branding expected)
-            3. Is it generic with NO visible brand/details? If YES → Score 10-30
-            4. Can you see specific brand/product text? If YES → Score 50+
+            SCORING TIERS:
             
-            Generic product characteristics (10-30):
-            - No visible brand name or logo
-            - No strain name or product details
-            - Generic shape/form (could be any brand)
-            - No distinguishing features
-            - Professional photo but no specifics
+            1. **NOT CANNABIS (0-10)**
+               - Non-cannabis items, art, random objects
             
-            Remember:
-            - A generic vape on Dutchie = still generic (10-30)
-            - No visible branding = stock photo (10-30)
-            - Must SEE brand/details for 50+ score
-            - URL source is IRRELEVANT to scoring
+            2. **GENERIC STOCK (10-30)**
+               - No visible brand name or logo
+               - Could be ANY brand's product
+               - Generic shape with no details
+            
+            3. **BASIC PRODUCT (30-50)**
+               - Some details but minimal information
+               - May have partial branding
+            
+            4. **AUTHENTIC PRODUCT (50-70)**
+               - Clear brand name visible
+               - Product type identifiable
+               - Professional but single element
+            
+            5. **IDEAL PRODUCT SHOT (75-90)**
+               - Shows BOTH packaging AND inner product
+               - Bold brand visibility
+               - Product/strain name clear
+               - Professional multi-element composition
+               - Clean, intentional layout
+               - This is the gold standard for product photography
+            
+            6. **DISPENSARY/RETAIL (85-95)**
+               - Real retail environment
+               - Multiple authentic products
+               - Natural setting
+            
+            Key evaluation points:
+            - Cannabis flower without packaging = 45-60 (special case)
+            - No brand visible = MAX 30
+            - Brand visible = MIN 50
+            - Package + product shown = 75-90 range
+            - Professional ≠ Stock (can be 75-90 if shows multiple elements)
+            
+            Remember: High-quality brand photography that effectively shows packaging, inner product, and details deserves 75-90 scoring.
         """),
         # Enable memory
         memory=Memory(
