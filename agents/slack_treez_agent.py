@@ -9,8 +9,8 @@ from agno.embedder.openai import OpenAIEmbedder
 from agno.tools.firecrawl import FirecrawlTools
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.storage.agent.postgres import PostgresAgentStorage
-from agno.memory.postgres import PostgresMemoryDb
-from agno.memory import Memory
+from agno.memory.v2.db.postgres import PostgresMemoryDb
+from agno.memory.v2.memory import Memory
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import asyncio
