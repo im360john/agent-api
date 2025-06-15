@@ -1,7 +1,7 @@
 from typing import Optional, List, Union
 import os
 from datetime import datetime
-from agno import Agent
+from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.knowledge.text import TextKnowledgeBase
 from agno.vectordb.pgvector import PgVector, SearchType
