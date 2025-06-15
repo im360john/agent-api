@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [{ name = "Agno", email = "hello@agno.com" }]
 
 dependencies = [
-  "agno",
+  "agno>=1.6.2",
   "aiofiles",
   "aiohttp",
   "duckduckgo-search",
