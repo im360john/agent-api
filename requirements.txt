@@ -31,8 +31,11 @@ google-api-python-client==2.172.0
 google-auth==2.40.3
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
+google-cloud-vision==3.10.2
 googleapis-common-protos==1.70.0
 greenlet==3.2.3
+grpcio==1.73.0
+grpcio-status==1.73.0
 h11==0.16.0
 httpcore==1.0.9
 httplib2==0.22.0
@@ -40,6 +43,7 @@ httptools==0.6.4
 httpx==0.28.1
 httpx-sse==0.4.0
 idna==3.10
+imagehash==4.3.2
 imageio==2.37.0
 jinja2==3.1.6
 jiter==0.10.0
@@ -51,10 +55,12 @@ mcp==1.9.4
 mdurl==0.1.2
 multidict==6.4.4
 multitasking==0.0.11
+nest-asyncio==1.6.0
 networkx==3.5
 numpy==2.3.0
 oauthlib==3.2.2
 openai==1.86.0
+opencv-python==4.11.0.86
 packaging==25.0
 pandas==2.3.0
 peewee==3.18.1
@@ -75,10 +81,12 @@ pydantic-core==2.33.2
 pydantic-settings==2.9.1
 pygments==2.19.1
 pyparsing==3.2.3
+pytesseract==0.3.13
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-multipart==0.0.20
 pytz==2025.2
+pywavelets==1.8.0
 pyyaml==6.0.2
 requests==2.32.4
 requests-oauthlib==2.0.0

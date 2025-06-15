@@ -25,6 +25,11 @@ dependencies = [
   "slack-sdk",
   "httpx",
   "mcp",
+  "nest-asyncio",
+  "opencv-python>=4.8.0",
+  "pytesseract>=0.3.10",
+  "google-cloud-vision>=3.5.0",
+  "imagehash>=4.3.1",
 ]
 
 [project.optional-dependencies]
