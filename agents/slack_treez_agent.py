@@ -221,13 +221,13 @@ class SlackTreezBot:
     
     async def update_knowledge_base(self, urls: Optional[List[str]] = None, force_update: bool = False) -> dict:
         """
-        Update the Treez knowledge base with latest documentation using streaming
+        Update the Treez knowledge base with latest documentation
         
         Args:
             urls: List of URLs to crawl. Defaults to main support site.
             force_update: If True, re-crawl and update all documents regardless of existing content.
         
-        Note: Uses streaming to process articles incrementally as they're crawled.
+        Note: Processes articles in small batches to avoid memory issues.
         """
         if urls is None:
             # Start with the main support site
@@ -262,99 +262,68 @@ class SlackTreezBot:
         
         import hashlib
         
-        # Define event handlers for streaming
-        async def on_document(detail):
-            """Process each document as it's crawled"""
-            try:
-                page_data = detail
-                if 'markdown' in page_data and page_data['markdown']:
-                    # Only process pages from support.treez.io
-                    page_url = page_data.get('url', page_data.get('metadata', {}).get('sourceURL', ''))
-                    if not page_url.startswith('https://support.treez.io'):
-                        logger.debug(f"Skipping non-Treez URL: {page_url}")
-                        return
-                    
-                    logger.info(f"Processing document: {page_url}")
-                    
-                    # Calculate content hash for deduplication
-                    content_hash = hashlib.md5(page_data['markdown'].encode()).hexdigest()
-                    
-                    # Extract title
-                    title = page_data.get('title', page_data.get('metadata', {}).get('title', 'Untitled'))
-                    
-                    # Create document
-                    doc = Document(
-                        content=page_data['markdown'],
-                        meta_data={
-                            "title": title,
-                            "source": page_url,
-                            "domain": "support.treez.io",
-                            "description": page_data.get('description', page_data.get('metadata', {}).get('description', '')),
-                            "updated_at": datetime.now().isoformat(),
-                            "content_hash": content_hash
-                        }
-                    )
-                    
-                    # Upsert single document immediately
-                    logger.info(f"Upserting document: {title} from {page_url}")
-                    result = vector_db.upsert(documents=[doc])
-                    if result is not None and hasattr(result, '__await__'):
-                        await result
-                    
-                    results["updated"] += 1
-                    results["crawled_urls"].append(page_url)
-                    
-            except Exception as e:
-                logger.error(f"Error processing document: {str(e)}")
-                results["failed"] += 1
-        
-        def on_error(detail):
-            """Handle crawl errors"""
-            logger.error(f"Crawl error: {detail.get('error', 'Unknown error')}")
-            results["failed"] += 1
-        
-        def on_done(detail):
-            """Handle crawl completion"""
-            logger.info(f"Crawl completed with status: {detail.get('status', 'Unknown')}")
-        
-        # Try streaming approach first
         for base_url in urls:
             try:
-                logger.info(f"Starting streaming crawl of {base_url}...")
+                logger.info(f"Crawling {base_url} and all sub-pages...")
                 
-                # Check if crawl_url_and_watch is available
-                if hasattr(firecrawl, 'crawl_url_and_watch'):
-                    # Use streaming crawl
-                    watcher = firecrawl.crawl_url_and_watch(base_url, limit=500)
+                # Use regular crawl
+                crawl_response = firecrawl.crawl_url(base_url, limit=500)
+                
+                if crawl_response:
+                    # Check if we got data (could be in 'data' or direct list)
+                    pages = crawl_response if isinstance(crawl_response, list) else crawl_response.get('data', [])
                     
-                    # Add event listeners
-                    watcher.add_event_listener("document", on_document)
-                    watcher.add_event_listener("error", on_error)
-                    watcher.add_event_listener("done", on_done)
+                    # Process in batches of 10 to avoid memory issues
+                    batch_size = 10
+                    documents = []
                     
-                    # Start watching
-                    await watcher.connect()
+                    for i, page_data in enumerate(pages if isinstance(pages, list) else []):
+                        if 'markdown' in page_data and page_data['markdown']:
+                            # Only process pages from support.treez.io
+                            page_url = page_data.get('url', page_data.get('metadata', {}).get('sourceURL', ''))
+                            if not page_url.startswith('https://support.treez.io'):
+                                continue
+                            
+                            logger.info(f"Processing document {i+1}: {page_url}")
+                            
+                            # Calculate content hash for deduplication
+                            content_hash = hashlib.md5(page_data['markdown'].encode()).hexdigest()
+                            
+                            # Extract title
+                            title = page_data.get('title', page_data.get('metadata', {}).get('title', 'Untitled'))
+                            
+                            # Create document
+                            doc = Document(
+                                content=page_data['markdown'],
+                                meta_data={
+                                    "title": title,
+                                    "source": page_url,
+                                    "domain": "support.treez.io",
+                                    "description": page_data.get('description', page_data.get('metadata', {}).get('description', '')),
+                                    "updated_at": datetime.now().isoformat(),
+                                    "content_hash": content_hash
+                                }
+                            )
+                            documents.append(doc)
+                            results["crawled_urls"].append(page_url)
+                        
+                        # Process batch when it reaches the batch size or at the end
+                        if len(documents) >= batch_size or (i == len(pages) - 1 and documents):
+                            logger.info(f"Upserting batch of {len(documents)} documents")
+                            # Check if upsert is async or sync
+                            result = vector_db.upsert(documents=documents)
+                            if result is not None and hasattr(result, '__await__'):
+                                await result
+                            results["updated"] += len(documents)
+                            documents = []  # Reset for next batch
+                    
                     results["urls"].append(base_url)
                 else:
-                    # Fallback to regular crawl if streaming not available
-                    logger.info("Streaming not available, using regular crawl...")
-                    crawl_response = firecrawl.crawl_url(base_url, limit=500)
-                    
-                    if crawl_response:
-                        # Process all pages at once (old method)
-                        pages = crawl_response if isinstance(crawl_response, list) else crawl_response.get('data', [])
-                        
-                        for page_data in pages if isinstance(pages, list) else []:
-                            # Process using the same logic as streaming
-                            await on_document(page_data)
-                        
-                        results["urls"].append(base_url)
-                    else:
-                        logger.error(f"No data returned from crawl of {base_url}")
-                        results["failed"] += 1
+                    logger.error(f"No data returned from crawl of {base_url}")
+                    results["failed"] += 1
                     
             except Exception as e:
-                logger.error(f"Failed to crawl {base_url}: {str(e)}")
+                logger.error(f"Failed to crawl and update knowledge from {base_url}: {str(e)}")
                 results["failed"] += 1
         
         return results
