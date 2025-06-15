@@ -5,6 +5,7 @@ from textwrap import dedent
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.knowledge.text import TextKnowledgeBase
+from agno.knowledge.document import Document
 from agno.vectordb.pgvector import PgVector, SearchType
 from agno.embedder.openai import OpenAIEmbedder
 from agno.tools.firecrawl import FirecrawlTools
@@ -341,8 +342,21 @@ async def seed_knowledge_base(agent: Agent):
     ]
     
     try:
+        # Convert seed content to Document objects
+        documents = []
         for content in seed_content:
-            agent.knowledge.load_data(content)
+            doc = Document(
+                content=content["content"],
+                meta_data={
+                    "title": content["title"],
+                    "source": content["source"],
+                    "domain": content["domain"]
+                }
+            )
+            documents.append(doc)
+        
+        # Load documents into knowledge base
+        agent.knowledge.load(documents=documents)
         logger.info("Successfully seeded knowledge base with initial content")
         return True
     except Exception as e:
