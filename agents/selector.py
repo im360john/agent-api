@@ -2,13 +2,7 @@ from enum import Enum
 from typing import List, Optional
 
 from agents.agno_assist import get_agno_assist
-# Temporarily disable client agent if MCP tools not available
-try:
-    from agents.client import run_agent
-    CLIENT_AGENT_AVAILABLE = True
-except ImportError:
-    CLIENT_AGENT_AVAILABLE = False
-    run_agent = None
+from agents.client import run_agent
 from agents.finance_agent import get_finance_agent
 from agents.product_image_agent import get_product_image_agent
 from agents.treezlambda_agent import get_treezlambda_agent
@@ -48,8 +42,6 @@ def get_agent(
     elif agent_id == AgentType.FINANCE_AGENT:
         return get_finance_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.CLIENT_AGENT:
-        if not CLIENT_AGENT_AVAILABLE:
-            raise ValueError("Client agent not available - MCP tools may not be installed")
         return run_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.TREEZLAMBDA_AGENT:
         return get_treezlambda_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)

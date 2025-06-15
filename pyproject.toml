@@ -24,6 +24,7 @@ dependencies = [
   "scikit-image",
   "slack-sdk",
   "httpx",
+  "mcp",
 ]
 
 [project.optional-dependencies]
