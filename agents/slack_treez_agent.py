@@ -269,15 +269,19 @@ class SlackTreezBot:
                 
                 # Use regular crawl with caching to avoid recrawling unchanged content
                 # maxAge: 172800 seconds = 48 hours
-                # Try without scrape_options first to see if that's causing the issue
                 try:
                     crawl_response = firecrawl.crawl_url(
                         base_url, 
-                        limit=500
+                        limit=500,
+                        scrape_options={
+                            'formats': ['markdown'],
+                            'maxAge': 172800  # Use cache if less than 48 hours old
+                        }
                     )
                 except Exception as e:
                     logger.error(f"Error during crawl_url: {str(e)}")
                     logger.error(f"Error type: {type(e)}")
+                    logger.error(f"Full traceback:", exc_info=True)
                     raise
                 
                 logger.info(f"Crawl response type: {type(crawl_response)}")
@@ -286,7 +290,16 @@ class SlackTreezBot:
                 
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
-                    pages = crawl_response if isinstance(crawl_response, list) else crawl_response.get('data', [])
+                    if isinstance(crawl_response, dict):
+                        pages = crawl_response.get('data', [])
+                    elif isinstance(crawl_response, list):
+                        pages = crawl_response
+                    elif hasattr(crawl_response, 'data'):
+                        pages = crawl_response.data
+                    else:
+                        logger.error(f"Unexpected crawl_response structure: {crawl_response}")
+                        pages = []
+                    
                     logger.info(f"Crawl returned {len(pages) if isinstance(pages, list) else 0} pages")
                     
                     # Process in batches of 10 to avoid memory issues
