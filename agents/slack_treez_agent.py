@@ -257,44 +257,37 @@ class SlackTreezBot:
                 logger.info(f"Crawling {base_url} and all sub-pages...")
                 
                 # Use Firecrawl to crawl the entire site
-                crawl_params = {
-                    'crawlerOptions': {
-                        'includes': ['/en/**'],  # Include all English pages
-                        'excludes': [],
-                        'generateImgAltText': False,
-                        'returnOnlyUrls': False,
-                        'maxDepth': 10,  # Deep crawl to get all articles
-                        'mode': 'crawl',
-                        'ignoreSitemap': False,
-                        'limit': 500,  # Limit to prevent infinite crawling
-                        'allowBackwardCrawling': False,
-                        'allowExternalContentLinks': False
-                    },
-                    'pageOptions': {
-                        'includeHtml': False,
-                        'includeRawHtml': False,
-                        'onlyIncludeTags': ['main', 'article', 'section'],
-                        'removeTags': ['nav', 'footer', 'header', 'script', 'style'],
-                        'onlyMainContent': True,
-                        'waitFor': 1000
-                    }
-                }
+                # According to API docs, parameters should be passed directly
+                crawl_job = firecrawl.crawl_url(
+                    base_url,
+                    wait=True,  # Wait for crawl to complete
+                    limit=500,  # Maximum number of pages to crawl
+                    maxDepth=10,  # Maximum depth to crawl
+                    includePaths=['/en/**'],  # Include all English pages
+                    excludePaths=[],
+                    allowBackwardLinks=False,
+                    allowExternalLinks=False,
+                    includeHtml=False,
+                    includeRawHtml=False,
+                    onlyMainContent=True,
+                    removeTags=['nav', 'footer', 'header', 'script', 'style']
+                )
                 
-                # Start crawl job
-                crawl_job = firecrawl.crawl_url(base_url, params=crawl_params)
-                
-                if crawl_job and 'data' in crawl_job:
+                if crawl_job:
                     documents = []
                     
-                    for page_data in crawl_job['data']:
+                    # Check if we got data (could be in 'data' or direct list)
+                    pages = crawl_job.get('data', crawl_job) if isinstance(crawl_job, dict) else crawl_job
+                    
+                    for page_data in pages if isinstance(pages, list) else []:
                         if 'markdown' in page_data and page_data['markdown']:
                             # Only process pages from support.treez.io
-                            page_url = page_data.get('metadata', {}).get('sourceURL', '')
+                            page_url = page_data.get('url', page_data.get('metadata', {}).get('sourceURL', ''))
                             if not page_url.startswith('https://support.treez.io'):
                                 continue
                             
                             # Extract title
-                            title = page_data.get('metadata', {}).get('title', 'Untitled')
+                            title = page_data.get('title', page_data.get('metadata', {}).get('title', 'Untitled'))
                             
                             # Create document
                             doc = Document(
@@ -303,7 +296,7 @@ class SlackTreezBot:
                                     "title": title,
                                     "source": page_url,
                                     "domain": "support.treez.io",
-                                    "description": page_data.get('metadata', {}).get('description', ''),
+                                    "description": page_data.get('description', page_data.get('metadata', {}).get('description', '')),
                                     "updated_at": datetime.now().isoformat()
                                 }
                             )
@@ -436,8 +429,8 @@ async def seed_knowledge_base(agent: Agent):
                 from sqlalchemy.orm import sessionmaker
                 
                 # Get database URL
-                db_url = getattr(vector_db, 'db_url', db_url)
-                engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
+                db_url_for_table = getattr(vector_db, 'db_url', db_url)
+                engine = create_engine(db_url_for_table.replace('+asyncpg', '').replace('+aiopg', ''))
                 
                 with engine.begin() as conn:
                     # First ensure schema exists
