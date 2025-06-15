@@ -55,12 +55,18 @@ async def test_update_knowledge_base():
         # Test a search to verify content was added
         logger.info("\nTesting search in knowledge base...")
         try:
-            # Try without limit parameter
-            search_results = await agent.knowledge.search("Treez POS")
+            # Try without await since it might be synchronous
+            search_results = agent.knowledge.search("Treez POS")
             logger.info(f"Found {len(search_results) if search_results else 0} search results")
         except Exception as e:
             logger.warning(f"Search failed: {e}")
-            search_results = None
+            # Try with await if sync failed
+            try:
+                search_results = await agent.knowledge.search("Treez POS")
+                logger.info(f"Found {len(search_results) if search_results else 0} search results (async)")
+            except Exception as e2:
+                logger.warning(f"Async search also failed: {e2}")
+                search_results = None
         
         if search_results:
             for i, result in enumerate(search_results[:3]):  # Show first 3 results

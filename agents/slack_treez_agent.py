@@ -74,7 +74,7 @@ def get_slack_treez_agent(
     # Set up knowledge base with PgVector
     knowledge_base = TextKnowledgeBase(
         vector_db=PgVector(
-            table_name="ai.treez_support_articles",  # Include schema name
+            table_name="treez_support_articles",  # Schema will be added by PgVector
             db_url=db_url,
             search_type=SearchType.hybrid,
             embedder=OpenAIEmbedder(
@@ -272,7 +272,7 @@ class SlackTreezBot:
                 try:
                     crawl_response = firecrawl.crawl_url(
                         base_url, 
-                        limit=10,  # Reduced for testing
+                        limit=5,  # Reduced for faster testing
                         scrape_options=ScrapeOptions(
                             formats=['markdown'],
                             maxAge=172800  # Use cache if less than 48 hours old
@@ -353,7 +353,18 @@ class SlackTreezBot:
                     
                     for i, page_data in enumerate(pages if isinstance(pages, list) else []):
                         # Debug log for each page
-                        logger.info(f"Processing page {i+1}...")
+                        # Try to extract URL early for logging
+                        debug_url = None
+                        if isinstance(page_data, dict):
+                            debug_url = page_data.get('url') or page_data.get('sourceURL')
+                            if not debug_url and 'metadata' in page_data:
+                                debug_url = page_data['metadata'].get('url') or page_data['metadata'].get('sourceURL')
+                        elif hasattr(page_data, 'url'):
+                            debug_url = page_data.url
+                        elif hasattr(page_data, 'sourceURL'):
+                            debug_url = page_data.sourceURL
+                        
+                        logger.info(f"Processing page {i+1}... URL: {debug_url or 'NO URL FOUND'}")
                         total_processed += 1
                         
                         # Check different possible content fields
@@ -369,9 +380,31 @@ class SlackTreezBot:
                             logger.warning(f"Page {i+1} has no content in 'markdown', 'content', or 'text' fields")
                             if isinstance(page_data, dict):
                                 logger.warning(f"Available keys: {list(page_data.keys())}")
+                                # Log all keys and sample values to understand structure
+                                for key in list(page_data.keys())[:5]:  # First 5 keys
+                                    value = page_data[key]
+                                    if isinstance(value, str):
+                                        logger.warning(f"  {key}: {value[:100]}...")
+                                    elif isinstance(value, dict):
+                                        logger.warning(f"  {key}: dict with keys {list(value.keys())[:5]}")
+                                    else:
+                                        logger.warning(f"  {key}: {type(value)}")
                         
                         if content:
                             total_with_content += 1
+                            
+                            # Log the structure when we DO have content
+                            if i == 0:  # Log details for first page with content
+                                logger.info(f"First page with content - type: {type(page_data)}")
+                                if isinstance(page_data, dict):
+                                    logger.info(f"Keys in page_data: {list(page_data.keys())}")
+                                    # Check for nested structures
+                                    for key in ['metadata', 'meta', 'info', 'data']:
+                                        if key in page_data and isinstance(page_data[key], dict):
+                                            logger.info(f"  {key} contains: {list(page_data[key].keys())[:10]}")
+                                elif hasattr(page_data, '__dict__'):
+                                    logger.info(f"Page attributes: {dir(page_data)}")
+                            
                             # Extract URL from various possible fields
                             page_url = None
                             if isinstance(page_data, dict):
@@ -385,6 +418,11 @@ class SlackTreezBot:
                             
                             if not page_url:
                                 logger.warning(f"Page {i+1} has no URL, skipping...")
+                                # Log all string values that might contain URLs
+                                if isinstance(page_data, dict):
+                                    for k, v in page_data.items():
+                                        if isinstance(v, str) and ('http' in v or 'treez' in v):
+                                            logger.warning(f"  Potential URL in '{k}': {v[:100]}")
                                 continue
                             
                             # Only process pages from support.treez.io
