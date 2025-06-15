@@ -1,0 +1,454 @@
+2025-06-15 23:38:46,119 - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 23:38:48,223 - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 23:38:48,223 - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 23:38:48,223 - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
+2025-06-15 23:38:48,223 - INFO - Starting async crawl with polling...
+2025-06-15 23:38:48,740 - INFO - ✅ Crawl job started. ID: e2bf9e15-e357-4be8-9ab3-16525555873f
+2025-06-15 23:38:48,938 - INFO - Status type: <class 'firecrawl.firecrawl.CrawlStatusResponse'>
+2025-06-15 23:38:48,938 - INFO - Status attributes: ['completed', 'construct', 'copy', 'creditsUsed', 'data', 'dict', 'expiresAt', 'from_orm', 'json', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'next', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'success', 'total', 'update_forward_refs', 'validate']
+2025-06-15 23:38:48,938 - INFO - Status.data type: <class 'list'>, has data: True
+2025-06-15 23:38:53,477 - INFO - 📈 Crawl progress: 1/607 pages (Status: scraping)
+2025-06-15 23:38:53,477 - INFO - 📋 Status has 1 documents to process
+2025-06-15 23:38:53,477 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:38:53,478 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:38:53,478 - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:38:53,478 - INFO - Processing URL: https://support.treez.io/en/
+
+🚀 Starting Treez Knowledge Base Crawl
+Time: 2025-06-15 23:38:46.119359
+This will continue running and show progress...
+
+INFO Found 10 documents                                                         
+2025-06-15 23:38:58,122 - INFO - 📈 Crawl progress: 5/641 pages (Status: scraping)
+2025-06-15 23:38:58,122 - INFO - 📋 Status has 5 documents to process
+2025-06-15 23:38:58,122 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:38:58,122 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:38:58,123 - INFO - 📄 Processing 4 new pages...
+2025-06-15 23:38:58,123 - INFO - Processing URL: https://support.treez.io/en/collections/12931118-centralized-user-management
+2025-06-15 23:38:58,123 - INFO - 📊 Progress: Processed 2 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:38:59,423 - INFO - Processing URL: https://support.treez.io/en/collections/8972368-hardware
+INFO Found 10 documents                                                         
+2025-06-15 23:39:00,430 - INFO - Processing URL: https://support.treez.io/en/collections/12931115-centralized-features
+2025-06-15 23:39:00,431 - INFO - 📊 Progress: Processed 4 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:01,843 - INFO - Processing URL: https://support.treez.io/en/articles/9972107-treez-ecommerce-release-notes
+INFO Found 10 documents                                                         
+2025-06-15 23:39:02,985 - INFO - Document too large (110105 chars), splitting into 4 chunks
+2025-06-15 23:39:05,442 - INFO - 📈 Crawl progress: 13/645 pages (Status: scraping)
+2025-06-15 23:39:05,443 - INFO - 📋 Status has 13 documents to process
+2025-06-15 23:39:05,443 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:39:05,443 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:39:05,443 - INFO - 📄 Processing 8 new pages...
+2025-06-15 23:39:05,444 - INFO - Processing URL: https://support.treez.io/en/articles/9130023-selltreez-how-do-i-add-a-new-pricing-tier
+2025-06-15 23:39:05,444 - INFO - 📊 Progress: Processed 6 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:06,621 - INFO - Processing URL: https://support.treez.io/en/collections/8972512-selltreez-pos
+INFO Found 10 documents                                                         
+2025-06-15 23:39:07,807 - INFO - Document too large (38325 chars), splitting into 2 chunks
+2025-06-15 23:39:07,807 - INFO - Processing URL: https://support.treez.io/en/collections/12251469-tag-management
+2025-06-15 23:39:07,807 - INFO - 📊 Progress: Processed 8 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:09,195 - INFO - Processing URL: https://support.treez.io/en/articles/9130365-selltreez-api-product-update-59-0-0
+INFO Found 10 documents                                                         
+2025-06-15 23:39:10,303 - INFO - Uploading batch of 10 documents...
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 11448 tokens (11448 in your prompt; 0 for the    
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 11484 tokens (11484 in your prompt; 0 for the    
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 12724 tokens (12724 in your prompt; 0 for the    
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 8806 tokens (8806 in your prompt; 0 for the      
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+INFO Upserted batch of 6 documents.                                             
+2025-06-15 23:39:12,976 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:39:12,976 - INFO - === FIRST BATCH VERIFICATION ===
+INFO Found 1 documents                                                          
+2025-06-15 23:39:13,847 - INFO - ✅ Upload verification PASSED
+2025-06-15 23:39:13,848 - INFO - Processing URL: https://support.treez.io/en/articles/9426534-biotrack-medical-il
+2025-06-15 23:39:13,848 - INFO - 📊 Progress: Processed 10 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:14,925 - INFO - Processing URL: https://support.treez.io/en/articles/9130034-selltreez-how-do-i-create-pre-rolls-edibles
+INFO Found 10 documents                                                         
+2025-06-15 23:39:15,920 - INFO - Processing URL: https://support.treez.io/en/articles/9129436-metrc-error-glossary
+2025-06-15 23:39:15,920 - INFO - 📊 Progress: Processed 12 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:17,143 - INFO - Processing URL: https://support.treez.io/en/collections/8972521-inventory-transfers
+INFO Found 10 documents                                                         
+2025-06-15 23:39:20,822 - INFO - 📈 Crawl progress: 33/659 pages (Status: scraping)
+2025-06-15 23:39:20,823 - INFO - 📋 Status has 33 documents to process
+2025-06-15 23:39:20,823 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:39:20,823 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:39:20,824 - INFO - 📄 Processing 20 new pages...
+2025-06-15 23:39:20,824 - INFO - Processing URL: https://support.treez.io/en/articles/9130364-selltreez-api-product-update-59-2-0
+2025-06-15 23:39:20,824 - INFO - 📊 Progress: Processed 14 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:22,146 - INFO - Processing URL: https://support.treez.io/en/articles/9129220-michigan-cannabis-compliance-guide
+INFO Found 10 documents                                                         
+2025-06-15 23:39:23,416 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129220-michigan-cannabis-compliance-guide
+2025-06-15 23:39:23,416 - INFO - Processing URL: https://support.treez.io/en/articles/9129940-selltreez-end-of-day-revenue-reconciliation-sop
+2025-06-15 23:39:23,416 - INFO - 📊 Progress: Processed 16 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:24,398 - INFO - Processing URL: https://support.treez.io/en/articles/9130399-open-api-product-updates-32-0-0
+INFO Found 10 documents                                                         
+2025-06-15 23:39:25,371 - INFO - Processing URL: https://support.treez.io/en/articles/9129060-swifter-in-store-ach
+2025-06-15 23:39:25,371 - INFO - 📊 Progress: Processed 18 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:26,686 - INFO - Processing URL: https://support.treez.io/en/articles/10139464-guide-to-out-of-stock-low-stock-products-for-treez-ecommerce
+INFO Found 10 documents                                                         
+2025-06-15 23:39:28,203 - INFO - Processing URL: https://support.treez.io/en/articles/9130101-selltreez-reprinting-receipts
+2025-06-15 23:39:28,203 - INFO - 📊 Progress: Processed 20 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:29,421 - INFO - Uploading batch of 10 documents...
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 9242 tokens (9242 in your prompt; 0 for the      
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+INFO Upserted batch of 9 documents.                                             
+2025-06-15 23:39:32,226 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:39:32,226 - INFO - Processing URL: https://support.treez.io/en/articles/9129966-selltreez-all-about-location-management
+INFO Found 10 documents                                                         
+2025-06-15 23:39:33,357 - INFO - Processing URL: https://support.treez.io/en/articles/9129429-syncing-metrc-lab-results
+2025-06-15 23:39:33,357 - INFO - 📊 Progress: Processed 22 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:34,842 - INFO - Processing URL: https://support.treez.io/en/articles/9130398-treez-api-change-10-18-22-deprecation-of-legacy-customer-image-upload
+INFO Found 10 documents                                                         
+2025-06-15 23:39:35,954 - INFO - Processing URL: https://support.treez.io/en/articles/9130063-selltreez-curbside-pickup
+2025-06-15 23:39:35,954 - INFO - 📊 Progress: Processed 24 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:37,462 - INFO - Processing URL: https://support.treez.io/en/articles/9129878-selltreez-configuring-list-management
+INFO Found 10 documents                                                         
+2025-06-15 23:39:39,148 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129878-selltreez-configuring-list-management
+2025-06-15 23:39:39,148 - INFO - Processing URL: https://support.treez.io/en/articles/9130055-selltreez-how-do-i-set-up-my-personal-view-on-the-fulfillment-dashboard
+2025-06-15 23:39:39,148 - INFO - 📊 Progress: Processed 26 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:40,638 - INFO - Content changed, updating: https://support.treez.io/en/articles/9130055-selltreez-how-do-i-set-up-my-personal-view-on-the-fulfillment-dashboard
+2025-06-15 23:39:40,639 - INFO - Processing URL: https://support.treez.io/en/articles/9129009-how-can-i-collect-payment-for-a-transaction-that-has-been-returned-with-an-ach-return-code-r02
+INFO Found 10 documents                                                         
+2025-06-15 23:39:42,057 - INFO - Processing URL: https://support.treez.io/en/articles/9952743-treez-product-updates-summer-release-notes-versions-65-0-1-65-21-1
+2025-06-15 23:39:42,058 - INFO - 📊 Progress: Processed 28 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:43,353 - INFO - Processing URL: https://support.treez.io/en/articles/9129853-selltreez-how-do-i-add-or-remove-a-user-to-enterprise-product-management-epm
+INFO Found 10 documents                                                         
+2025-06-15 23:39:44,657 - INFO - Processing URL: https://support.treez.io/en/articles/9129134-retail-analytics-az-met-report-dashboard
+2025-06-15 23:39:44,657 - INFO - 📊 Progress: Processed 30 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:46,053 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:39:49,053 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:39:49,054 - INFO - Processing URL: https://support.treez.io/en/articles/9129418-selltreez-track-and-trace-glossary
+INFO Found 10 documents                                                         
+2025-06-15 23:39:50,449 - INFO - Processing URL: https://support.treez.io/en/articles/9129961-how-do-i-activate-or-deactivate-a-sellable-location-in-location-management
+2025-06-15 23:39:50,449 - INFO - 📊 Progress: Processed 32 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:51,997 - INFO - Processing URL: https://support.treez.io/en/articles/9130081-selltreez-how-do-i-check-in-a-returning-customer
+INFO Found 10 documents                                                         
+2025-06-15 23:39:57,066 - INFO - 📈 Crawl progress: 80/710 pages (Status: scraping)
+2025-06-15 23:39:57,067 - INFO - 📋 Status has 80 documents to process
+2025-06-15 23:39:57,067 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:39:57,067 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:39:57,069 - INFO - 📄 Processing 47 new pages...
+2025-06-15 23:39:57,069 - INFO - Processing URL: https://support.treez.io/en/articles/10139825-setting-up-url-redirects-for-your-website
+2025-06-15 23:39:57,069 - INFO - 📊 Progress: Processed 34 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:39:58,555 - INFO - Processing URL: https://support.treez.io/en/articles/9129926-selltreez-how-do-i-edit-a-cash-drop
+INFO Found 10 documents                                                         
+2025-06-15 23:39:59,848 - INFO - Processing URL: https://support.treez.io/en/articles/9129235-important-sops-and-daily-habits-that-support-running-a-healthy-business
+2025-06-15 23:39:59,848 - INFO - 📊 Progress: Processed 36 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:01,156 - INFO - Processing URL: https://support.treez.io/en/articles/9129296-how-do-i-duplicate-or-clone-a-role-in-role-management-in-the-latest-version-of-treez
+INFO Found 10 documents                                                         
+2025-06-15 23:40:02,363 - INFO - Processing URL: https://support.treez.io/en/articles/9130033-selltreez-how-do-i-deactivate-a-product
+2025-06-15 23:40:02,363 - INFO - 📊 Progress: Processed 38 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:03,683 - INFO - Processing URL: https://support.treez.io/en/articles/9129195-selltreez-how-does-the-weedmaps-dispatch-integration-work-with-selltreez
+INFO Found 10 documents                                                         
+2025-06-15 23:40:04,938 - INFO - Processing URL: https://support.treez.io/en/articles/9130069-selltreez-how-do-i-find-a-receipt
+2025-06-15 23:40:04,939 - INFO - 📊 Progress: Processed 40 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:06,420 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:40:09,603 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:40:09,603 - INFO - Processing URL: https://support.treez.io/en/articles/9129955-selltreez-discount-report-in-app
+INFO Found 10 documents                                                         
+2025-06-15 23:40:10,880 - INFO - Processing URL: https://support.treez.io/en/articles/11328106-april-18th-2025
+2025-06-15 23:40:10,880 - INFO - 📊 Progress: Processed 42 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:12,355 - INFO - Processing URL: https://support.treez.io/en/articles/9129214-how-does-the-metrc-delivery-feature-work-with-true-up
+INFO Found 10 documents                                                         
+2025-06-15 23:40:13,649 - INFO - Processing URL: https://support.treez.io/en/articles/9130065-how-does-a-budtender-process-returns-refunds
+2025-06-15 23:40:13,649 - INFO - 📊 Progress: Processed 44 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:14,864 - INFO - Processing URL: https://support.treez.io/en/articles/9129299-role-management-glossary-in-the-latest-version-of-treez
+INFO Found 10 documents                                                         
+2025-06-15 23:40:16,145 - INFO - Processing URL: https://support.treez.io/en/articles/9129051-what-should-i-do-if-i-receive-a-code-on-my-ach-orders
+2025-06-15 23:40:16,146 - INFO - 📊 Progress: Processed 46 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:17,422 - INFO - Processing URL: https://support.treez.io/en/articles/11272798-march-7th-2025
+INFO Found 10 documents                                                         
+2025-06-15 23:40:19,431 - INFO - Processing URL: https://support.treez.io/en/articles/9129258-what-information-is-required-to-enable-the-metrc-delivery-feature
+2025-06-15 23:40:19,431 - INFO - 📊 Progress: Processed 48 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:20,971 - INFO - Processing URL: https://support.treez.io/en/articles/9129881-selltreez-how-do-i-require-scanning-when-adding-items-to-an-order
+INFO Found 10 documents                                                         
+2025-06-15 23:40:22,455 - INFO - Processing URL: https://support.treez.io/en/articles/9129221-michigan-immature-plant-sales
+2025-06-15 23:40:22,455 - INFO - 📊 Progress: Processed 50 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:23,949 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:40:27,303 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:40:27,303 - INFO - Processing URL: https://support.treez.io/en/articles/11534540-may-23rd-2025
+INFO Found 10 documents                                                         
+2025-06-15 23:40:29,154 - INFO - Processing URL: https://support.treez.io/en/articles/9129390-selltreez-how-do-i-print-a-diagnostic-receipt-zebra
+2025-06-15 23:40:29,154 - INFO - 📊 Progress: Processed 52 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:30,649 - INFO - Processing URL: https://support.treez.io/en/articles/9129959-selltreez-handling-out-of-state-medical-ids-in-metrc-control-mo-only
+INFO Found 10 documents                                                         
+2025-06-15 23:40:32,303 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129959-selltreez-handling-out-of-state-medical-ids-in-metrc-control-mo-only
+2025-06-15 23:40:32,303 - INFO - Processing URL: https://support.treez.io/en/collections/11774583-content-management
+2025-06-15 23:40:32,303 - INFO - 📊 Progress: Processed 54 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:34,053 - INFO - Processing URL: https://support.treez.io/en/articles/9129181-how-do-i-enable-alpine-iq
+INFO Found 10 documents                                                         
+2025-06-15 23:40:35,553 - INFO - Processing URL: https://support.treez.io/en/articles/9129038-how-do-ach-payments-work
+2025-06-15 23:40:35,554 - INFO - 📊 Progress: Processed 56 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:37,601 - INFO - Processing URL: https://support.treez.io/en/articles/10983216-selltreez-product-update-3-28-25
+INFO Found 10 documents                                                         
+2025-06-15 23:40:39,721 - INFO - Processing URL: https://support.treez.io/en/articles/10947512-how-does-treez-report-user-based-actions-to-biotrack-new-york
+2025-06-15 23:40:39,721 - INFO - 📊 Progress: Processed 58 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:41,560 - INFO - Processing URL: https://support.treez.io/en/articles/9129157-how-does-the-budtender-dashboard-help-my-business
+INFO Found 10 documents                                                         
+2025-06-15 23:40:43,304 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129157-how-does-the-budtender-dashboard-help-my-business
+2025-06-15 23:40:43,306 - INFO - Processing URL: https://support.treez.io/en/articles/9130415-open-api-product-updates-14-0-14-1
+2025-06-15 23:40:43,306 - INFO - 📊 Progress: Processed 60 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:45,055 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:40:48,648 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:40:48,648 - INFO - Processing URL: https://support.treez.io/en/articles/9129973-selltreez-how-do-i-conduct-a-dispensary-to-dispensary-transfer-outside-of-metrc
+INFO Found 10 documents                                                         
+2025-06-15 23:40:50,154 - INFO - Processing URL: https://support.treez.io/en/articles/9129384-vip-it-hardware-and-support
+2025-06-15 23:40:50,154 - INFO - 📊 Progress: Processed 62 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:51,949 - INFO - Processing URL: https://support.treez.io/en/articles/11156052-treezpay-ecommerce-widget
+INFO Found 10 documents                                                         
+2025-06-15 23:40:53,627 - INFO - Processing URL: https://support.treez.io/en/articles/9129025-will-you-email-me-if-an-ach-transaction-has-been-returned
+2025-06-15 23:40:53,628 - INFO - 📊 Progress: Processed 64 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:55,348 - INFO - Processing URL: https://support.treez.io/en/articles/9129883-configuring-barcode-scanners
+INFO Found 10 documents                                                         
+2025-06-15 23:40:57,307 - INFO - Document too large (31466 chars), splitting into 2 chunks
+2025-06-15 23:40:57,308 - INFO - Processing URL: https://support.treez.io/en/articles/9129997-selltreez-reassigning-inventory-to-a-different-product
+2025-06-15 23:40:57,308 - INFO - 📊 Progress: Processed 66 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:40:59,208 - INFO - Processing URL: https://support.treez.io/en/articles/9129882-selltreez-label-maker
+INFO Found 10 documents                                                         
+2025-06-15 23:41:00,627 - INFO - Processing URL: https://support.treez.io/en/articles/9129993-selltreez-how-do-i-invoice-inventory-imported-from-metrc
+2025-06-15 23:41:00,627 - INFO - 📊 Progress: Processed 68 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:02,351 - INFO - Processing URL: https://support.treez.io/en/articles/9129015-is-there-a-time-limit-for-retrying-ach-returns-due-to-an-r01-return-code
+INFO Found 10 documents                                                         
+2025-06-15 23:41:03,955 - INFO - Processing URL: https://support.treez.io/en/articles/9130381-selltreez-api-product-update-45-0-0
+2025-06-15 23:41:03,955 - INFO - 📊 Progress: Processed 70 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:05,555 - INFO - Uploading batch of 10 documents...
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 12021 tokens (12021 in your prompt; 0 for the    
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+INFO Upserted batch of 9 documents.                                             
+2025-06-15 23:41:07,967 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:41:07,968 - INFO - Processing URL: https://support.treez.io/en/articles/9130038-selltreez-how-do-i-create-a-product
+INFO Found 10 documents                                                         
+2025-06-15 23:41:10,147 - INFO - Content changed, updating: https://support.treez.io/en/articles/9130038-selltreez-how-do-i-create-a-product
+2025-06-15 23:41:10,148 - INFO - Processing URL: https://support.treez.io/en/collections/12780218-archived-api-release-notes
+2025-06-15 23:41:10,148 - INFO - 📊 Progress: Processed 72 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:11,707 - INFO - Processing URL: https://support.treez.io/en/articles/9129024-what-should-i-do-if-i-receive-an-ach-return-notification-for-a-transaction
+INFO Found 10 documents                                                         
+2025-06-15 23:41:13,200 - INFO - Processing URL: https://support.treez.io/en/articles/9130106-selltreez-pausing-a-shift
+2025-06-15 23:41:13,200 - INFO - 📊 Progress: Processed 74 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:14,711 - INFO - Content changed, updating: https://support.treez.io/en/articles/9130106-selltreez-pausing-a-shift
+2025-06-15 23:41:14,712 - INFO - Processing URL: https://support.treez.io/en/articles/9129859-selltreez-all-about-configuration
+INFO Found 10 documents                                                         
+2025-06-15 23:41:16,449 - INFO - Document too large (45112 chars), splitting into 2 chunks
+2025-06-15 23:41:16,450 - INFO - Processing URL: https://support.treez.io/en/articles/10496759-payment-devices-daily-best-practices
+2025-06-15 23:41:16,451 - INFO - 📊 Progress: Processed 76 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:18,205 - INFO - Processing URL: https://support.treez.io/en/articles/10562225-provisioning-a-temporary-password-for-treez-ecommerce-admin
+INFO Found 10 documents                                                         
+2025-06-15 23:41:19,951 - INFO - Processing URL: https://support.treez.io/en/articles/9130085-selltreez-what-is-the-difference-between-an-express-order-and-a-pick-up-order
+2025-06-15 23:41:19,951 - INFO - 📊 Progress: Processed 78 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:21,849 - INFO - Processing URL: https://support.treez.io/en/collections/11264605-treezpay-reporting-reconciliation
+INFO Found 10 documents                                                         
+2025-06-15 23:41:23,553 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:41:26,946 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:41:26,947 - INFO - Processing URL: https://support.treez.io/en/articles/9129944-selltreez-adjusting-the-float-amount
+2025-06-15 23:41:26,947 - INFO - 📊 Progress: Processed 80 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:32,181 - INFO - 📈 Crawl progress: 157/739 pages (Status: scraping)
+2025-06-15 23:41:32,181 - INFO - 📋 Status has 157 documents to process
+2025-06-15 23:41:32,182 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:41:32,182 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:41:32,183 - INFO - 📄 Processing 77 new pages...
+2025-06-15 23:41:32,183 - INFO - Processing URL: https://support.treez.io/en/articles/9129320-selltreez-why-am-i-getting-a-not-supported-error-when-i-try-to-upload-an-image-file-in-customer-management
+INFO Found 10 documents                                                         
+2025-06-15 23:41:33,844 - INFO - Processing URL: https://support.treez.io/en/articles/11165732-new-product-slug-structure-seo-enhancement
+2025-06-15 23:41:33,844 - INFO - 📊 Progress: Processed 82 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:35,347 - INFO - Processing URL: https://support.treez.io/en/articles/9129326-pls-hardware-and-support
+INFO Found 10 documents                                                         
+2025-06-15 23:41:37,696 - INFO - Processing URL: https://support.treez.io/en/articles/9130099-selltreez-redeeming-rewards-configured-as-a-payment
+2025-06-15 23:41:37,697 - INFO - 📊 Progress: Processed 84 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:40,422 - INFO - Processing URL: https://support.treez.io/en/articles/9130046-selltreez-all-about-product-management
+INFO Found 10 documents                                                         
+2025-06-15 23:41:42,215 - INFO - Processing URL: https://support.treez.io/en/articles/9129318-how-do-i-ensure-i-am-not-double-paying-excise-tax-with-the-new-ca-tax-changes
+2025-06-15 23:41:42,215 - INFO - 📊 Progress: Processed 86 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:43,921 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129318-how-do-i-ensure-i-am-not-double-paying-excise-tax-with-the-new-ca-tax-changes
+2025-06-15 23:41:43,922 - INFO - Processing URL: https://support.treez.io/en/articles/9129356-treezsupport-selltreez-point-of-sale-and-customer-management-basics
+INFO Found 10 documents                                                         
+2025-06-15 23:41:45,648 - INFO - Processing URL: https://support.treez.io/en/articles/9129866-selltreez-custom-tender-type
+2025-06-15 23:41:45,648 - INFO - 📊 Progress: Processed 88 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:47,434 - INFO - Processing URL: https://support.treez.io/en/articles/9129080-insufficient-balance-warning-for-ach-authorized-orders
+INFO Found 10 documents                                                         
+2025-06-15 23:41:49,697 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:41:52,553 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:41:52,554 - INFO - Processing URL: https://support.treez.io/en/articles/9129415-selltreez-creating-a-new-item-in-metrc
+2025-06-15 23:41:52,554 - INFO - 📊 Progress: Processed 90 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:54,346 - INFO - Processing URL: https://support.treez.io/en/articles/9130095-selltreez-what-do-i-do-if-a-customer-is-not-showing-in-the-customer-queue-at-the-pos
+INFO Found 10 documents                                                         
+2025-06-15 23:41:56,052 - INFO - Processing URL: https://support.treez.io/en/articles/9130102-selltreez-why-are-some-pos-discounts-greyed-out
+2025-06-15 23:41:56,052 - INFO - 📊 Progress: Processed 92 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:41:57,875 - INFO - Processing URL: https://support.treez.io/en/articles/9129376-treezsupport-quick-guide-static-vs-dynamic-float-in-selltreez
+INFO Found 10 documents                                                         
+2025-06-15 23:41:59,935 - INFO - Processing URL: https://support.treez.io/en/articles/9129255-lendica-integration-in-treez
+2025-06-15 23:41:59,935 - INFO - 📊 Progress: Processed 94 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:01,859 - INFO - Processing URL: https://support.treez.io/en/articles/10247681-selltreez-product-update-65-30-0
+INFO Found 10 documents                                                         
+2025-06-15 23:42:03,700 - INFO - Processing URL: https://support.treez.io/en/articles/9129388-selltreez-adjusting-receipt-font-size-and-margins
+2025-06-15 23:42:03,700 - INFO - 📊 Progress: Processed 96 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:05,370 - INFO - Processing URL: https://support.treez.io/en/articles/9129337-how-to-contact-treez-support
+INFO Found 10 documents                                                         
+2025-06-15 23:42:07,055 - INFO - Processing URL: https://support.treez.io/en/collections/8972577-product-product-management
+2025-06-15 23:42:07,055 - INFO - 📊 Progress: Processed 98 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:09,204 - INFO - Processing URL: https://support.treez.io/en/articles/9129440-metrc-starting-inventory
+INFO Found 10 documents                                                         
+2025-06-15 23:42:11,370 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:42:14,421 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:42:14,422 - INFO - Processing URL: https://support.treez.io/en/articles/10561913-february-7th-2025
+2025-06-15 23:42:14,422 - INFO - 📊 Progress: Processed 100 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:16,053 - INFO - Processing URL: https://support.treez.io/en/collections/8972230-api-ecosystem
+INFO Found 10 documents                                                         
+2025-06-15 23:42:17,921 - INFO - Processing URL: https://support.treez.io/en/articles/9129203-selltreez-onfleet-errors
+2025-06-15 23:42:17,921 - INFO - 📊 Progress: Processed 102 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:20,052 - INFO - Processing URL: https://support.treez.io/en/articles/9129259-using-manufacturer-barcodes-to-save-time-and-overhead-costs
+INFO Found 10 documents                                                         
+2025-06-15 23:42:22,001 - INFO - Processing URL: https://support.treez.io/en/articles/9129246-how-do-i-add-the-edit-store-permission-in-the-latest-version-of-treez
+2025-06-15 23:42:22,001 - INFO - 📊 Progress: Processed 104 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:23,907 - INFO - Processing URL: https://support.treez.io/en/articles/9129856-selltreez-merging-customer-profiles
+INFO Found 10 documents                                                         
+2025-06-15 23:42:25,709 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129856-selltreez-merging-customer-profiles
+2025-06-15 23:42:25,710 - INFO - Processing URL: https://support.treez.io/en/articles/9129225-michigan-purchase-limits-for-adult-use-vs-medical
+2025-06-15 23:42:25,710 - INFO - 📊 Progress: Processed 106 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:27,621 - INFO - Processing URL: https://support.treez.io/en/articles/9129307-all-about-organization-management-in-the-latest-version-of-treez
+INFO Found 10 documents                                                         
+2025-06-15 23:42:29,920 - INFO - Processing URL: https://support.treez.io/en/articles/9129183-alpine-iq-two-way-integration-with-treez
+2025-06-15 23:42:29,920 - INFO - 📊 Progress: Processed 108 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:31,696 - INFO - Processing URL: https://support.treez.io/en/articles/9504357-treez-ecommerce-customization-checklist
+INFO Found 10 documents                                                         
+2025-06-15 23:42:33,631 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:42:37,053 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:42:37,054 - INFO - Processing URL: https://support.treez.io/en/articles/9129404-infused-flower-preroll-pl-updates
+2025-06-15 23:42:37,054 - INFO - 📊 Progress: Processed 110 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:39,700 - INFO - Processing URL: https://support.treez.io/en/articles/9129947-selltreez-why-is-the-total-cost-in-the-inventory-log-report-not-matching-the-total-cost-listed-in-the-invoice-report
+INFO Found 10 documents                                                         
+2025-06-15 23:42:41,670 - INFO - Processing URL: https://support.treez.io/en/articles/9129953-selltreez-tax-report-in-app
+2025-06-15 23:42:41,670 - INFO - 📊 Progress: Processed 112 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:43,804 - INFO - Processing URL: https://support.treez.io/en/articles/11534453-customize-your-sale-filter-name
+INFO Found 10 documents                                                         
+2025-06-15 23:42:45,803 - INFO - Processing URL: https://support.treez.io/en/articles/9130408-open-api-product-updates-18-0
+2025-06-15 23:42:45,804 - INFO - 📊 Progress: Processed 114 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:48,154 - INFO - Processing URL: https://support.treez.io/en/articles/10396373-january-17th-2025
+INFO Found 10 documents                                                         
+2025-06-15 23:42:50,371 - INFO - Processing URL: https://support.treez.io/en/articles/9130361-selltreez-api-product-update-61-0-0
+2025-06-15 23:42:50,371 - INFO - 📊 Progress: Processed 116 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:52,456 - INFO - Processing URL: https://support.treez.io/en/articles/9129292-how-do-i-add-a-user-in-user-management-in-the-latest-version-of-treez
+INFO Found 10 documents                                                         
+2025-06-15 23:42:54,304 - INFO - Processing URL: https://support.treez.io/en/articles/9129838-how-do-i-edit-pricing-from-the-pricing-page-in-central-catalog
+2025-06-15 23:42:54,304 - INFO - 📊 Progress: Processed 118 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:42:56,111 - INFO - Processing URL: https://support.treez.io/en/articles/10479449-connecting-treez-to-biotrack-ny
+INFO Found 10 documents                                                         
+2025-06-15 23:42:58,107 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:43:01,594 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:43:01,594 - INFO - Processing URL: https://support.treez.io/en/articles/9129303-setting-a-pin-resetting-a-pin-in-the-latest-version-of-treez
+2025-06-15 23:43:01,595 - INFO - 📊 Progress: Processed 120 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:43:03,661 - INFO - Processing URL: https://support.treez.io/en/articles/9129929-selltreez-closing-a-shift
+INFO Found 10 documents                                                         
+2025-06-15 23:43:05,647 - INFO - Processing URL: https://support.treez.io/en/articles/9129216-how-do-i-enable-metrc-delivery
+2025-06-15 23:43:05,648 - INFO - 📊 Progress: Processed 122 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:43:07,494 - INFO - Processing URL: https://support.treez.io/en/articles/10336829-integrated-payments-setup-overview-card-payments
+INFO Found 10 documents                                                         
+2025-06-15 23:43:10,303 - INFO - Processing URL: https://support.treez.io/en/collections/11264568-treezpay-configuration-setup
+2025-06-15 23:43:10,304 - INFO - 📊 Progress: Processed 124 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:43:12,448 - INFO - Processing URL: https://support.treez.io/en/articles/9129279-how-does-the-new-self-service-pin-feature-work-in-the-latest-version-of-treez
+INFO Found 10 documents                                                         
+2025-06-15 23:43:14,303 - INFO - Processing URL: https://support.treez.io/en/articles/9129385-selltreez-troubleshooting-epson-printer-tm-88v
+2025-06-15 23:43:14,303 - INFO - 📊 Progress: Processed 126 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:43:16,556 - INFO - Processing URL: https://support.treez.io/en/articles/9129412-troubleshooting-tasks-stuck-on-metrc-control
+INFO Found 10 documents                                                         
+2025-06-15 23:43:19,722 - INFO - Processing URL: https://support.treez.io/en/articles/9129916-selltreez-updating-user-group-page-permissions
+2025-06-15 23:43:19,722 - INFO - 📊 Progress: Processed 128 pages
+INFO Found 10 documents                                                         
+2025-06-15 23:43:22,806 - INFO - Content changed, updating: https://support.treez.io/en/articles/9129916-selltreez-updating-user-group-page-permissions
+2025-06-15 23:43:22,811 - INFO - Processing URL: https://support.treez.io/en/articles/9129008-what-is-the-meaning-of-ach-return-code-r03-no-account-unable-to-locate-account-and-r04-invalid-account-number-and-r20-non-transaction-account
+INFO Found 10 documents                                                         
+2025-06-15 23:43:25,311 - INFO - Uploading batch of 10 documents...
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:43:28,842 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:43:28,842 - INFO - Processing URL: https://support.treez.io/en/articles/9129262-how-do-i-close-delivery-groups-in-the-new-metrc-delivery-feature
+2025-06-15 23:43:28,842 - INFO - 📊 Progress: Processed 130 pages

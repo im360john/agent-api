@@ -1,0 +1,176 @@
+2025-06-15 23:33:10,128 - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 23:33:12,135 - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 23:33:12,135 - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 23:33:12,136 - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
+2025-06-15 23:33:12,136 - INFO - Starting async crawl with polling...
+2025-06-15 23:33:12,675 - INFO - ✅ Crawl job started. ID: c082108a-d94b-4e61-ac43-29c1c94ba9bd
+2025-06-15 23:33:12,911 - INFO - Status type: <class 'firecrawl.firecrawl.CrawlStatusResponse'>
+2025-06-15 23:33:12,911 - INFO - Status attributes: ['completed', 'construct', 'copy', 'creditsUsed', 'data', 'dict', 'expiresAt', 'from_orm', 'json', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'next', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'success', 'total', 'update_forward_refs', 'validate']
+2025-06-15 23:33:12,911 - INFO - Status.data type: <class 'list'>, has data: True
+2025-06-15 23:33:18,200 - INFO - 📈 Crawl progress: 1/535 pages (Status: scraping)
+2025-06-15 23:33:18,201 - INFO - 📋 Status has 1 documents to process
+2025-06-15 23:33:18,201 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:18,201 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:18,201 - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:33:18,202 - INFO - Processing URL: https://support.treez.io/en/
+2025-06-15 23:33:22,310 - INFO - 📈 Crawl progress: 6/538 pages (Status: scraping)
+2025-06-15 23:33:22,310 - INFO - 📋 Status has 6 documents to process
+2025-06-15 23:33:22,311 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:22,311 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:22,311 - INFO - 📄 Processing 5 new pages...
+2025-06-15 23:33:22,311 - INFO - Processing URL: https://support.treez.io/en/articles/11004255-how-do-i-create-a-bogo-buy-one-get-one-discount
+2025-06-15 23:33:22,311 - INFO - 📊 Progress: Processed 2 pages
+2025-06-15 23:33:23,352 - INFO - Processing URL: https://support.treez.io/en/articles/9129896-how-do-i-edit-the-titles-of-cash-drawers-and-the-main-vault
+2025-06-15 23:33:23,947 - INFO - Processing URL: https://support.treez.io/en/collections/8972605-customer-membership-agreement-form
+2025-06-15 23:33:23,947 - INFO - 📊 Progress: Processed 4 pages
+2025-06-15 23:33:24,626 - INFO - Processing URL: https://support.treez.io/en/articles/9130043-sellltreez-how-can-i-create-a-non-cannabis-donation-in-selltreez-for-a-specific-cause
+2025-06-15 23:33:25,227 - INFO - Processing URL: https://support.treez.io/en/articles/9130055-selltreez-how-do-i-set-up-my-personal-view-on-the-fulfillment-dashboard
+2025-06-15 23:33:25,228 - INFO - 📊 Progress: Processed 6 pages
+2025-06-15 23:33:28,305 - INFO - 📈 Crawl progress: 12/550 pages (Status: scraping)
+2025-06-15 23:33:28,306 - INFO - 📋 Status has 12 documents to process
+2025-06-15 23:33:28,306 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:28,306 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:28,306 - INFO - 📄 Processing 6 new pages...
+2025-06-15 23:33:28,306 - INFO - Processing URL: https://support.treez.io/en/articles/9130390-selltreez-api-product-update-39-1-0
+2025-06-15 23:33:29,154 - INFO - Processing URL: https://support.treez.io/en/articles/9129271-selltreez-why-does-my-cash-handling-total-look-different-from-my-product-report-total
+2025-06-15 23:33:29,155 - INFO - 📊 Progress: Processed 8 pages
+2025-06-15 23:33:29,854 - INFO - Processing URL: https://support.treez.io/en/articles/9129204-selltreez-configuring-the-onfleet-integration
+2025-06-15 23:33:30,552 - INFO - Processing URL: https://support.treez.io/en/articles/9130027-selltreez-how-do-i-set-a-primary-image
+2025-06-15 23:33:30,553 - INFO - 📊 Progress: Processed 10 pages
+2025-06-15 23:33:31,163 - INFO - Processing URL: https://support.treez.io/en/articles/9130104-selltreez-starting-a-shift
+2025-06-15 23:33:31,853 - INFO - Processing URL: https://support.treez.io/en/articles/9129141-retail-analytics-trends-dashboard
+2025-06-15 23:33:31,853 - INFO - 📊 Progress: Processed 12 pages
+2025-06-15 23:33:35,055 - INFO - 📈 Crawl progress: 15/562 pages (Status: scraping)
+2025-06-15 23:33:35,055 - INFO - 📋 Status has 15 documents to process
+2025-06-15 23:33:35,055 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:35,056 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:35,056 - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:33:35,056 - INFO - Processing URL: https://support.treez.io/en/collections/11235994-one-app
+2025-06-15 23:33:35,859 - INFO - Processing URL: https://support.treez.io/en/collections/8972214-dashboards
+2025-06-15 23:33:35,860 - INFO - 📊 Progress: Processed 14 pages
+2025-06-15 23:33:36,653 - INFO - Uploading batch of 10 documents...
+2025-06-15 23:33:40,200 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:33:40,201 - INFO - === FIRST BATCH VERIFICATION ===
+2025-06-15 23:33:40,811 - INFO - ✅ Upload verification PASSED
+2025-06-15 23:33:40,811 - INFO - Processing URL: https://support.treez.io/en/articles/9129127-unleash-your-dispensary-s-data-into-insights
+2025-06-15 23:33:44,187 - INFO - 📈 Crawl progress: 18/563 pages (Status: scraping)
+2025-06-15 23:33:44,188 - INFO - 📋 Status has 18 documents to process
+2025-06-15 23:33:44,188 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:44,188 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:44,189 - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:33:44,189 - INFO - Processing URL: https://support.treez.io/en/articles/9129445-returns-to-vendor-in-metrc-and-treez
+2025-06-15 23:33:44,189 - INFO - 📊 Progress: Processed 16 pages
+2025-06-15 23:33:45,058 - INFO - Processing URL: https://support.treez.io/en/collections/8972756-selltreez-api
+2025-06-15 23:33:45,616 - INFO - Processing URL: https://support.treez.io/en/articles/9129983-selltreez-all-about-inventory-adjustment
+2025-06-15 23:33:45,617 - INFO - 📊 Progress: Processed 18 pages
+2025-06-15 23:33:49,715 - INFO - 📈 Crawl progress: 21/584 pages (Status: scraping)
+2025-06-15 23:33:49,715 - INFO - 📋 Status has 21 documents to process
+2025-06-15 23:33:49,715 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:49,715 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:49,716 - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:33:49,716 - INFO - Processing URL: https://support.treez.io/en/articles/9129954-selltreez-demographics-report-in-app
+2025-06-15 23:33:50,553 - INFO - Processing URL: https://support.treez.io/en/collections/8972240-state-specific-content
+2025-06-15 23:33:50,553 - INFO - 📊 Progress: Processed 20 pages
+2025-06-15 23:33:51,449 - INFO - Processing URL: https://support.treez.io/en/articles/9130004-selltreez-how-can-i-test-a-discount
+2025-06-15 23:33:56,058 - INFO - 📈 Crawl progress: 24/589 pages (Status: scraping)
+2025-06-15 23:33:56,058 - INFO - 📋 Status has 24 documents to process
+2025-06-15 23:33:56,058 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:33:56,058 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:33:56,059 - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:33:56,059 - INFO - Processing URL: https://support.treez.io/en/articles/11201129-illinois-metrc-what-to-expect
+2025-06-15 23:33:56,059 - INFO - 📊 Progress: Processed 22 pages
+2025-06-15 23:33:56,925 - INFO - Processing URL: https://support.treez.io/en/articles/9129410-selltreez-investigating-inventory-discrepancies-between-treez-and-metrc
+2025-06-15 23:33:57,913 - INFO - Processing URL: https://support.treez.io/en/articles/9129878-selltreez-configuring-list-management
+2025-06-15 23:33:57,914 - INFO - 📊 Progress: Processed 24 pages
+2025-06-15 23:34:01,602 - INFO - 📈 Crawl progress: 28/591 pages (Status: scraping)
+2025-06-15 23:34:01,602 - INFO - 📋 Status has 28 documents to process
+2025-06-15 23:34:01,602 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:01,603 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:01,604 - INFO - 📄 Processing 4 new pages...
+2025-06-15 23:34:01,604 - INFO - Processing URL: https://support.treez.io/en/articles/9129318-how-do-i-ensure-i-am-not-double-paying-excise-tax-with-the-new-ca-tax-changes
+2025-06-15 23:34:02,427 - INFO - Uploading batch of 10 documents...
+2025-06-15 23:34:05,743 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:34:05,744 - INFO - Processing URL: https://support.treez.io/en/articles/9129116-step-4-license-information
+2025-06-15 23:34:05,744 - INFO - 📊 Progress: Processed 26 pages
+2025-06-15 23:34:06,626 - INFO - Processing URL: https://support.treez.io/en/articles/9129428-how-do-i-split-a-package-in-metrc
+2025-06-15 23:34:07,354 - INFO - Processing URL: https://support.treez.io/en/articles/9130381-selltreez-api-product-update-45-0-0
+2025-06-15 23:34:07,354 - INFO - 📊 Progress: Processed 28 pages
+2025-06-15 23:34:10,500 - INFO - 📈 Crawl progress: 34/593 pages (Status: scraping)
+2025-06-15 23:34:10,500 - INFO - 📋 Status has 34 documents to process
+2025-06-15 23:34:10,500 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:10,501 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:10,501 - INFO - 📄 Processing 6 new pages...
+2025-06-15 23:34:10,501 - INFO - Processing URL: https://support.treez.io/en/articles/9129115-step-5-bank-information
+2025-06-15 23:34:11,473 - INFO - Processing URL: https://support.treez.io/en/articles/9129876-selltreez-label-maker-tips-and-tricks
+2025-06-15 23:34:11,473 - INFO - 📊 Progress: Processed 30 pages
+2025-06-15 23:34:12,233 - INFO - Processing URL: https://support.treez.io/en/collections/8972386-metrc
+2025-06-15 23:34:12,928 - INFO - Processing URL: https://support.treez.io/en/articles/10561949-february-14th-2025
+2025-06-15 23:34:12,928 - INFO - 📊 Progress: Processed 32 pages
+2025-06-15 23:34:13,732 - INFO - Processing URL: https://support.treez.io/en/articles/9129317-selltreez-creating-exit-labels-for-nevada
+2025-06-15 23:34:14,431 - INFO - Processing URL: https://support.treez.io/en/articles/9130036-selltreez-how-do-i-search-for-a-product
+2025-06-15 23:34:14,431 - INFO - 📊 Progress: Processed 34 pages
+2025-06-15 23:34:18,057 - INFO - 📈 Crawl progress: 38/594 pages (Status: scraping)
+2025-06-15 23:34:18,060 - INFO - 📋 Status has 38 documents to process
+2025-06-15 23:34:18,060 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:18,060 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:18,060 - INFO - 📄 Processing 4 new pages...
+2025-06-15 23:34:18,061 - INFO - Processing URL: https://support.treez.io/en/articles/9129916-selltreez-updating-user-group-page-permissions
+2025-06-15 23:34:19,203 - INFO - Processing URL: https://support.treez.io/en/articles/9130377-selltreez-api-product-update-49-0-0
+2025-06-15 23:34:19,203 - INFO - 📊 Progress: Processed 36 pages
+2025-06-15 23:34:19,924 - INFO - Processing URL: https://support.treez.io/en/articles/9130392-selltreez-api-product-update-38-0-1
+2025-06-15 23:34:20,626 - INFO - Uploading batch of 10 documents...
+2025-06-15 23:34:23,191 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:34:23,193 - INFO - Processing URL: https://support.treez.io/en/articles/9129135-retail-analytics-new-filters-for-inventory-performance-product-sales-inventory-report-dashboard
+2025-06-15 23:34:23,193 - INFO - 📊 Progress: Processed 38 pages
+2025-06-15 23:34:26,896 - INFO - 📈 Crawl progress: 45/599 pages (Status: scraping)
+2025-06-15 23:34:26,897 - INFO - 📋 Status has 45 documents to process
+2025-06-15 23:34:26,897 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:26,897 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:26,897 - INFO - 📄 Processing 7 new pages...
+2025-06-15 23:34:26,898 - INFO - Processing URL: https://support.treez.io/en/articles/9129387-printer-troubleshooting
+2025-06-15 23:34:27,995 - INFO - Processing URL: https://support.treez.io/en/collections/11447072-treezpay-troubleshooting-guides
+2025-06-15 23:34:27,995 - INFO - 📊 Progress: Processed 40 pages
+2025-06-15 23:34:29,176 - INFO - Processing URL: https://support.treez.io/en/collections/10352449-new-york
+2025-06-15 23:34:30,104 - INFO - Processing URL: https://support.treez.io/en/articles/9129250-how-can-i-easily-identify-and-hide-sample-items-from-the-ecommerce-menu
+2025-06-15 23:34:30,104 - INFO - 📊 Progress: Processed 42 pages
+2025-06-15 23:34:30,948 - INFO - Processing URL: https://support.treez.io/en/articles/11164175-permissions-for-central-catalog-and-discounts
+2025-06-15 23:34:31,879 - INFO - Processing URL: https://support.treez.io/en/articles/9130005-selltreez-how-do-i-create-a-bogo-discount
+2025-06-15 23:34:31,879 - INFO - 📊 Progress: Processed 44 pages
+2025-06-15 23:34:32,921 - INFO - Processing URL: https://support.treez.io/en/articles/9129218-what-to-do-in-the-event-of-a-product-recall-or-administrative-hold
+2025-06-15 23:34:36,568 - INFO - 📈 Crawl progress: 52/603 pages (Status: scraping)
+2025-06-15 23:34:36,569 - INFO - 📋 Status has 52 documents to process
+2025-06-15 23:34:36,569 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:36,569 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:36,569 - INFO - 📄 Processing 7 new pages...
+2025-06-15 23:34:36,569 - INFO - Processing URL: https://support.treez.io/en/articles/9129957-how-does-a-manager-process-a-return-refund-of-product-by-a-customer
+2025-06-15 23:34:36,569 - INFO - 📊 Progress: Processed 46 pages
+2025-06-15 23:34:37,424 - INFO - Processing URL: https://support.treez.io/en/articles/9129191-selltreez-treez-wm-dispatch-integration-guide
+2025-06-15 23:34:38,430 - INFO - Processing URL: https://support.treez.io/en/articles/10612505-receiving-inbound-biotrack-manifests-in-illinois
+2025-06-15 23:34:38,430 - INFO - 📊 Progress: Processed 48 pages
+2025-06-15 23:34:39,680 - INFO - Uploading batch of 10 documents...
+2025-06-15 23:34:42,407 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:34:42,407 - INFO - Processing URL: https://support.treez.io/en/articles/9129157-how-does-the-budtender-dashboard-help-my-business
+2025-06-15 23:34:43,206 - INFO - Processing URL: https://support.treez.io/en/articles/9129220-michigan-cannabis-compliance-guide
+2025-06-15 23:34:43,206 - INFO - 📊 Progress: Processed 50 pages
+2025-06-15 23:34:44,103 - INFO - Processing URL: https://support.treez.io/en/articles/9129252-how-do-i-name-a-cash-drawer
+2025-06-15 23:34:45,056 - INFO - Processing URL: https://support.treez.io/en/articles/9129855-selltreez-how-do-i-merge-customer-profiles
+2025-06-15 23:34:45,056 - INFO - 📊 Progress: Processed 52 pages
+2025-06-15 23:34:48,809 - INFO - 📈 Crawl progress: 60/606 pages (Status: scraping)
+2025-06-15 23:34:48,809 - INFO - 📋 Status has 60 documents to process
+2025-06-15 23:34:48,810 - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:34:48,810 - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:34:48,811 - INFO - 📄 Processing 8 new pages...
+2025-06-15 23:34:48,811 - INFO - Processing URL: https://support.treez.io/en/articles/10619521-february-21st-2025
+2025-06-15 23:34:49,706 - INFO - Processing URL: https://support.treez.io/en/articles/9130383-selltreez-api-product-update-43-0-0
+2025-06-15 23:34:49,706 - INFO - 📊 Progress: Processed 54 pages
+2025-06-15 23:34:50,603 - INFO - Processing URL: https://support.treez.io/en/articles/9129228-illinois-exporting-and-sorting-inventory-adjustment-for-cycle-counts
+2025-06-15 23:34:51,702 - INFO - Processing URL: https://support.treez.io/en/articles/9129043-treezpay-text-to-pay-credit-best-practices
+2025-06-15 23:34:51,702 - INFO - 📊 Progress: Processed 56 pages
+2025-06-15 23:34:52,604 - INFO - Processing URL: https://support.treez.io/en/collections/8972209-treezpay-portal
+2025-06-15 23:34:53,630 - INFO - Processing URL: https://support.treez.io/en/articles/9129431-selltreez-compliance-management-nuances-for-the-massachusetts-market
+2025-06-15 23:34:53,630 - INFO - 📊 Progress: Processed 58 pages
+2025-06-15 23:34:54,625 - INFO - Uploading batch of 10 documents...
+2025-06-15 23:34:57,430 - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:34:57,431 - INFO - Processing URL: https://support.treez.io/en/collections/12931115-centralized-features
+2025-06-15 23:34:58,684 - INFO - Processing URL: https://support.treez.io/en/articles/9129137-retail-analytics-invoices-dashboard
+2025-06-15 23:34:58,684 - INFO - 📊 Progress: Processed 60 pages

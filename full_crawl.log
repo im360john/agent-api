@@ -1,0 +1,292 @@
+2025-06-15 23:29:05,352 - __main__ - WARNING - DATABASE_URL not set. Using default: postgresql+psycopg://ai:ai@localhost:5432/ai
+2025-06-15 23:29:05,352 - __main__ - WARNING - Make sure PostgreSQL is running locally with database 'ai' and user 'ai'
+2025-06-15 23:29:05,352 - __main__ - WARNING - Or set DATABASE_URL in your .env file, e.g.:
+2025-06-15 23:29:05,352 - __main__ - WARNING - DATABASE_URL=postgresql+psycopg://user:password@host:port/database
+2025-06-15 23:29:05,352 - __main__ - INFO - Creating Slack Treez agent...
+2025-06-15 23:29:05,352 - agents.slack_treez_agent - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 23:29:07,185 - agents.slack_treez_agent - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 23:29:07,185 - __main__ - INFO - Starting knowledge base update...
+2025-06-15 23:29:07,185 - agents.slack_treez_agent - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 23:29:07,185 - agents.slack_treez_agent - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
+2025-06-15 23:29:07,185 - agents.slack_treez_agent - INFO - Starting async crawl with polling...
+2025-06-15 23:29:07,541 - agents.slack_treez_agent - INFO - ✅ Crawl job started. ID: dc50b80f-523b-4dce-8ca6-ff31433dc6d1
+2025-06-15 23:29:07,679 - agents.slack_treez_agent - INFO - Status type: <class 'firecrawl.firecrawl.CrawlStatusResponse'>
+2025-06-15 23:29:07,679 - agents.slack_treez_agent - INFO - Status attributes: ['completed', 'construct', 'copy', 'creditsUsed', 'data', 'dict', 'expiresAt', 'from_orm', 'json', 'model_computed_fields', 'model_config', 'model_construct', 'model_copy', 'model_dump', 'model_dump_json', 'model_extra', 'model_fields', 'model_fields_set', 'model_json_schema', 'model_parametrized_name', 'model_post_init', 'model_rebuild', 'model_validate', 'model_validate_json', 'model_validate_strings', 'next', 'parse_file', 'parse_obj', 'parse_raw', 'schema', 'schema_json', 'status', 'success', 'total', 'update_forward_refs', 'validate']
+2025-06-15 23:29:07,679 - agents.slack_treez_agent - INFO - Status.data type: <class 'list'>, has data: True
+2025-06-15 23:29:12,057 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 2/534 pages (Status: scraping)
+2025-06-15 23:29:12,057 - agents.slack_treez_agent - INFO - 📋 Status has 2 documents to process
+2025-06-15 23:29:12,057 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:12,057 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:12,058 - agents.slack_treez_agent - INFO - 📄 Processing 2 new pages...
+2025-06-15 23:29:12,058 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/12931118-centralized-user-management
+2025-06-15 23:29:12,058 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/12931115-centralized-features
+2025-06-15 23:29:12,058 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 2 pages
+2025-06-15 23:29:14,347 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 4/534 pages (Status: scraping)
+2025-06-15 23:29:14,347 - agents.slack_treez_agent - INFO - 📋 Status has 4 documents to process
+2025-06-15 23:29:14,347 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:14,347 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:14,348 - agents.slack_treez_agent - INFO - 📄 Processing 2 new pages...
+2025-06-15 23:29:14,348 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972615-product-updates
+2025-06-15 23:29:14,348 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972512-selltreez-pos
+2025-06-15 23:29:14,348 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 4 pages
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 7/536 pages (Status: scraping)
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - 📋 Status has 7 documents to process
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:16,621 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129175-aiq-reward-redemption-point-of-sale
+2025-06-15 23:29:16,622 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129993-selltreez-how-do-i-invoice-inventory-imported-from-metrc
+2025-06-15 23:29:16,622 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 6 pages
+2025-06-15 23:29:16,622 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130401-open-api-product-updates-28-0-0
+2025-06-15 23:29:18,951 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 8/538 pages (Status: scraping)
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - 📋 Status has 8 documents to process
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129946-in-the-inventory-valuation-report-what-does-d-p-qty-stand-for-in-app-reports
+2025-06-15 23:29:18,952 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 8 pages
+2025-06-15 23:29:21,401 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 11/538 pages (Status: scraping)
+2025-06-15 23:29:21,401 - agents.slack_treez_agent - INFO - 📋 Status has 11 documents to process
+2025-06-15 23:29:21,401 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:21,402 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:21,402 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:21,402 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129245-what-is-a-stackable-manual-discount
+2025-06-15 23:29:21,402 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/11272920-march-14-2025
+2025-06-15 23:29:21,402 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 10 pages
+2025-06-15 23:29:21,403 - agents.slack_treez_agent - INFO - Uploading batch of 10 documents...
+2025-06-15 23:29:21,667 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:21,844 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:22,173 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:22,383 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 400 Bad Request"
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 10388 tokens (10388 in your prompt; 0 for the    
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+2025-06-15 23:29:22,577 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:22,811 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:23,090 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:23,368 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:23,586 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:23,872 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Upserted batch of 9 documents.                                             
+2025-06-15 23:29:24,914 - agents.slack_treez_agent - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:29:24,915 - agents.slack_treez_agent - INFO - === FIRST BATCH VERIFICATION ===
+2025-06-15 23:29:25,031 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Found 1 documents                                                          
+2025-06-15 23:29:25,271 - agents.slack_treez_agent - INFO - ✅ Upload verification PASSED
+2025-06-15 23:29:25,271 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/11322211-march-28-2025
+2025-06-15 23:29:27,861 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 18/548 pages (Status: scraping)
+2025-06-15 23:29:27,861 - agents.slack_treez_agent - INFO - 📋 Status has 18 documents to process
+2025-06-15 23:29:27,861 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:27,861 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:27,862 - agents.slack_treez_agent - INFO - 📄 Processing 7 new pages...
+2025-06-15 23:29:27,862 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130051-is-a-pole-display-required
+2025-06-15 23:29:27,862 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 12 pages
+2025-06-15 23:29:27,862 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/10050843-treezpay-on-the-customer-facing-display-beta
+2025-06-15 23:29:27,862 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972533-configuration-sales-management
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 14 pages
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129131-retail-analytics-customer-insight-dashboard
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130050-how-to-sign-up-for-a-new-online-account-for-consumers-on-legacy-ecommerce
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 16 pages
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130008-how-do-i-enable-or-disable-the-auto-display-of-weedmaps-strikethrough-discounts-from-my-online-menu
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130024-selltreez-all-about-pricing-management
+2025-06-15 23:29:27,863 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 18 pages
+2025-06-15 23:29:30,216 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 19/548 pages (Status: scraping)
+2025-06-15 23:29:30,217 - agents.slack_treez_agent - INFO - 📋 Status has 19 documents to process
+2025-06-15 23:29:30,217 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:30,217 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:30,218 - agents.slack_treez_agent - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:29:30,218 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129869-selltreez-configuring-the-new-aov-display-on-a-cash-drawer
+2025-06-15 23:29:32,535 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 20/548 pages (Status: scraping)
+2025-06-15 23:29:32,535 - agents.slack_treez_agent - INFO - 📋 Status has 20 documents to process
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/11366710-selltreez-how-to-enable-automatic-printing-in-fulfillment
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 20 pages
+2025-06-15 23:29:32,536 - agents.slack_treez_agent - INFO - Uploading batch of 10 documents...
+2025-06-15 23:29:32,686 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:32,870 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:33,078 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 400 Bad Request"
+ERROR    Error processing document 'None': Error code: 400 - {'error':          
+         {'message': "This model's maximum context length is 8192 tokens,       
+         however you requested 9840 tokens (9840 in your prompt; 0 for the      
+         completion). Please reduce your prompt; or completion length.", 'type':
+         'invalid_request_error', 'param': None, 'code': None}}                 
+2025-06-15 23:29:33,578 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:33,788 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:34,020 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:34,210 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:34,548 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:34,768 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:34,928 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Upserted batch of 9 documents.                                             
+2025-06-15 23:29:35,204 - agents.slack_treez_agent - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:29:37,608 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 23/550 pages (Status: scraping)
+2025-06-15 23:29:37,609 - agents.slack_treez_agent - INFO - 📋 Status has 23 documents to process
+2025-06-15 23:29:37,609 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:37,609 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:37,610 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:37,610 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130038-selltreez-how-do-i-create-a-product
+2025-06-15 23:29:37,610 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129336-treezsupport-how-do-i-change-my-online-account-password-for-consumers
+2025-06-15 23:29:37,610 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 22 pages
+2025-06-15 23:29:37,610 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130036-selltreez-how-do-i-search-for-a-product
+2025-06-15 23:29:40,081 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 25/552 pages (Status: scraping)
+2025-06-15 23:29:40,082 - agents.slack_treez_agent - INFO - 📋 Status has 25 documents to process
+2025-06-15 23:29:40,082 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:40,082 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:40,083 - agents.slack_treez_agent - INFO - 📄 Processing 2 new pages...
+2025-06-15 23:29:40,083 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129905-selltreez-receipt-configurations
+2025-06-15 23:29:40,083 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 24 pages
+2025-06-15 23:29:40,083 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/11447072-treezpay-troubleshooting-guides
+2025-06-15 23:29:42,514 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 28/554 pages (Status: scraping)
+2025-06-15 23:29:42,515 - agents.slack_treez_agent - INFO - 📋 Status has 28 documents to process
+2025-06-15 23:29:42,515 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129139-retail-analytics-accounting-overview-dashboard
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 26 pages
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130070-selltreez-how-do-i-view-a-customer-s-purchase-history-at-the-pos
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130362-selltreez-api-product-update-60-0-1
+2025-06-15 23:29:42,516 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 28 pages
+2025-06-15 23:29:45,039 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 31/559 pages (Status: scraping)
+2025-06-15 23:29:45,039 - agents.slack_treez_agent - INFO - 📋 Status has 31 documents to process
+2025-06-15 23:29:45,040 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:45,040 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:45,041 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:45,041 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129856-selltreez-merging-customer-profiles
+2025-06-15 23:29:45,041 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129862-selltreez-how-do-i-configure-the-pos
+2025-06-15 23:29:45,042 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 30 pages
+2025-06-15 23:29:45,042 - agents.slack_treez_agent - INFO - Uploading batch of 10 documents...
+2025-06-15 23:29:45,240 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:45,668 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:45,850 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:46,341 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:46,496 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:46,718 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:46,902 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:47,108 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:47,628 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:29:49,891 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:29:50,217 - agents.slack_treez_agent - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:29:50,218 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/12931092-treezpay-release-notes
+2025-06-15 23:29:52,699 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 32/560 pages (Status: scraping)
+2025-06-15 23:29:52,699 - agents.slack_treez_agent - INFO - 📋 Status has 32 documents to process
+2025-06-15 23:29:52,699 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:52,700 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:52,700 - agents.slack_treez_agent - INFO - 📄 Processing 1 new pages...
+2025-06-15 23:29:52,700 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129911-how-can-i-set-a-user-to-approve-pos-returns
+2025-06-15 23:29:52,701 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 32 pages
+2025-06-15 23:29:55,290 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 35/561 pages (Status: scraping)
+2025-06-15 23:29:55,290 - agents.slack_treez_agent - INFO - 📋 Status has 35 documents to process
+2025-06-15 23:29:55,290 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:55,290 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:29:55,291 - agents.slack_treez_agent - INFO - 📄 Processing 3 new pages...
+2025-06-15 23:29:55,291 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129876-selltreez-label-maker-tips-and-tricks
+2025-06-15 23:29:55,291 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972558-inventory-compliance-management
+2025-06-15 23:29:55,291 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 34 pages
+2025-06-15 23:29:55,291 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130106-selltreez-pausing-a-shift
+2025-06-15 23:29:58,011 - agents.slack_treez_agent - INFO - 📋 Status has 35 documents to process
+2025-06-15 23:29:58,012 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:29:58,013 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:30:00,597 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 40/563 pages (Status: scraping)
+2025-06-15 23:30:00,597 - agents.slack_treez_agent - INFO - 📋 Status has 40 documents to process
+2025-06-15 23:30:00,597 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:30:00,597 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:30:00,598 - agents.slack_treez_agent - INFO - 📄 Processing 5 new pages...
+2025-06-15 23:30:00,598 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130089-selltreez-where-can-i-view-order-history
+2025-06-15 23:30:00,598 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 36 pages
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129880-selltreez-email-notification-service
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972521-inventory-transfers
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 38 pages
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130003-how-do-i-schedule-a-discount-with-beginning-and-end-dates
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129878-selltreez-configuring-list-management
+2025-06-15 23:30:00,599 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 40 pages
+2025-06-15 23:30:00,600 - agents.slack_treez_agent - INFO - Uploading batch of 10 documents...
+2025-06-15 23:30:00,802 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:01,051 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:01,302 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:01,562 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:01,802 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:02,058 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:02,230 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:02,440 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:02,945 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:03,302 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Upserted batch of 10 documents.                                            
+2025-06-15 23:30:03,803 - agents.slack_treez_agent - INFO - ✅ Successfully uploaded 10 documents
+2025-06-15 23:30:06,686 - agents.slack_treez_agent - INFO - 📈 Crawl progress: 47/550 pages (Status: cancelled)
+2025-06-15 23:30:06,686 - agents.slack_treez_agent - INFO - 📋 Status has 47 documents to process
+2025-06-15 23:30:06,686 - agents.slack_treez_agent - INFO - First page type: <class 'firecrawl.firecrawl.FirecrawlDocument'>
+2025-06-15 23:30:06,687 - agents.slack_treez_agent - INFO - Page attributes: ['actions', 'changeTracking', 'construct', 'copy', 'description', 'dict', 'extract', 'from_orm', 'html', 'json']
+2025-06-15 23:30:06,687 - agents.slack_treez_agent - INFO - 📄 Processing 7 new pages...
+2025-06-15 23:30:06,687 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129970-selltreez-investigating-inventory-count-discrepancies
+2025-06-15 23:30:06,687 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972592-retail-fulfillment
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 42 pages
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129885-selltreez-notification-configurations
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130393-selltreez-api-product-updates-38-0-0
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 44 pages
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9130410-open-api-product-updates-16-0
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/collections/8972606-customer-customer-management
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - 📊 Progress: Processed 46 pages
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Processing URL: https://support.treez.io/en/articles/9129959-selltreez-handling-out-of-state-medical-ids-in-metrc-control-mo-only
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - 🏁 Crawl finished with status: cancelled
+2025-06-15 23:30:06,688 - agents.slack_treez_agent - INFO - Uploading batch of 7 documents...
+2025-06-15 23:30:06,866 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:07,052 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:07,302 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:07,454 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:07,686 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:07,866 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-15 23:30:08,099 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Upserted batch of 7 documents.                                             
+2025-06-15 23:30:08,553 - agents.slack_treez_agent - INFO - ✅ Successfully uploaded 7 documents
+2025-06-15 23:30:08,553 - agents.slack_treez_agent - INFO - 
+=== CRAWL SUMMARY ===
+2025-06-15 23:30:08,553 - agents.slack_treez_agent - INFO - Total pages crawled: 47
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Pages with content: 47
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Treez URLs found: 47
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Documents skipped (unchanged): 0
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Documents updated (content changed): 0
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Documents added to knowledge base: 47
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - Failed: 0
+2025-06-15 23:30:08,554 - agents.slack_treez_agent - INFO - ===================
+
+2025-06-15 23:30:08,554 - __main__ - INFO - Update completed!
+2025-06-15 23:30:08,554 - __main__ - INFO - Results: {'updated': 47, 'failed': 0, 'skipped': 0, 'content_updated': 0, 'urls': ['https://support.treez.io/en/'], 'crawled_urls': ['https://support.treez.io/en/collections/12931118-centralized-user-management', 'https://support.treez.io/en/collections/12931115-centralized-features', 'https://support.treez.io/en/collections/8972615-product-updates', 'https://support.treez.io/en/collections/8972512-selltreez-pos', 'https://support.treez.io/en/articles/9129175-aiq-reward-redemption-point-of-sale', 'https://support.treez.io/en/articles/9129993-selltreez-how-do-i-invoice-inventory-imported-from-metrc', 'https://support.treez.io/en/articles/9130401-open-api-product-updates-28-0-0', 'https://support.treez.io/en/articles/9129946-in-the-inventory-valuation-report-what-does-d-p-qty-stand-for-in-app-reports', 'https://support.treez.io/en/articles/9129245-what-is-a-stackable-manual-discount', 'https://support.treez.io/en/articles/11272920-march-14-2025', 'https://support.treez.io/en/articles/11322211-march-28-2025', 'https://support.treez.io/en/articles/9130051-is-a-pole-display-required', 'https://support.treez.io/en/articles/10050843-treezpay-on-the-customer-facing-display-beta', 'https://support.treez.io/en/collections/8972533-configuration-sales-management', 'https://support.treez.io/en/articles/9129131-retail-analytics-customer-insight-dashboard', 'https://support.treez.io/en/articles/9130050-how-to-sign-up-for-a-new-online-account-for-consumers-on-legacy-ecommerce', 'https://support.treez.io/en/articles/9130008-how-do-i-enable-or-disable-the-auto-display-of-weedmaps-strikethrough-discounts-from-my-online-menu', 'https://support.treez.io/en/articles/9130024-selltreez-all-about-pricing-management', 'https://support.treez.io/en/articles/9129869-selltreez-configuring-the-new-aov-display-on-a-cash-drawer', 'https://support.treez.io/en/articles/11366710-selltreez-how-to-enable-automatic-printing-in-fulfillment', 'https://support.treez.io/en/articles/9130038-selltreez-how-do-i-create-a-product', 'https://support.treez.io/en/articles/9129336-treezsupport-how-do-i-change-my-online-account-password-for-consumers', 'https://support.treez.io/en/articles/9130036-selltreez-how-do-i-search-for-a-product', 'https://support.treez.io/en/articles/9129905-selltreez-receipt-configurations', 'https://support.treez.io/en/collections/11447072-treezpay-troubleshooting-guides', 'https://support.treez.io/en/articles/9129139-retail-analytics-accounting-overview-dashboard', 'https://support.treez.io/en/articles/9130070-selltreez-how-do-i-view-a-customer-s-purchase-history-at-the-pos', 'https://support.treez.io/en/articles/9130362-selltreez-api-product-update-60-0-1', 'https://support.treez.io/en/articles/9129856-selltreez-merging-customer-profiles', 'https://support.treez.io/en/articles/9129862-selltreez-how-do-i-configure-the-pos', 'https://support.treez.io/en/collections/12931092-treezpay-release-notes', 'https://support.treez.io/en/articles/9129911-how-can-i-set-a-user-to-approve-pos-returns', 'https://support.treez.io/en/articles/9129876-selltreez-label-maker-tips-and-tricks', 'https://support.treez.io/en/collections/8972558-inventory-compliance-management', 'https://support.treez.io/en/articles/9130106-selltreez-pausing-a-shift', 'https://support.treez.io/en/articles/9130089-selltreez-where-can-i-view-order-history', 'https://support.treez.io/en/articles/9129880-selltreez-email-notification-service', 'https://support.treez.io/en/collections/8972521-inventory-transfers', 'https://support.treez.io/en/articles/9130003-how-do-i-schedule-a-discount-with-beginning-and-end-dates', 'https://support.treez.io/en/articles/9129878-selltreez-configuring-list-management', 'https://support.treez.io/en/articles/9129970-selltreez-investigating-inventory-count-discrepancies', 'https://support.treez.io/en/collections/8972592-retail-fulfillment', 'https://support.treez.io/en/articles/9129885-selltreez-notification-configurations', 'https://support.treez.io/en/articles/9130393-selltreez-api-product-updates-38-0-0', 'https://support.treez.io/en/articles/9130410-open-api-product-updates-16-0', 'https://support.treez.io/en/collections/8972606-customer-customer-management', 'https://support.treez.io/en/articles/9129959-selltreez-handling-out-of-state-medical-ids-in-metrc-control-mo-only']}
+2025-06-15 23:30:08,554 - __main__ - INFO - 
+Testing search in knowledge base...
+2025-06-15 23:30:08,695 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Found 5 documents                                                          
+2025-06-15 23:30:09,383 - __main__ - INFO - Found 5 search results
+2025-06-15 23:30:09,383 - __main__ - INFO - 
+Result 1:
+2025-06-15 23:30:09,384 - __main__ - INFO - Title: Untitled
+2025-06-15 23:30:09,384 - __main__ - INFO - Source: https://support.treez.io/en/articles/9129885-selltreez-notification-configurations
+2025-06-15 23:30:09,385 - __main__ - INFO - Content preview: [Skip to main content](https://support.treez.io/en/articles/9129885-selltreez-notification-configurations#main-content)
+
+Table of contents
+
+[Order-Specific Notifications](https://support.treez.io/en/a...
+2025-06-15 23:30:09,385 - __main__ - INFO - 
+Result 2:
+2025-06-15 23:30:09,385 - __main__ - INFO - Title: Untitled
+2025-06-15 23:30:09,385 - __main__ - INFO - Source: https://support.treez.io/en/
+2025-06-15 23:30:09,385 - __main__ - INFO - Content preview: [Skip to main content](https://support.treez.io/en/#main-content)
+
+[![](https://intercom.help/treez-c78750aa94fd/assets/svg/icon:bizz-fin-building-storefront/000000)\\
+\\
+SellTreez POS\\
+\\
+Treez Poin...
+2025-06-15 23:30:09,385 - __main__ - INFO - 
+Result 3:
+2025-06-15 23:30:09,385 - __main__ - INFO - Title: Treez Overview
+2025-06-15 23:30:09,385 - __main__ - INFO - Source: treez_overview
+2025-06-15 23:30:09,386 - __main__ - INFO - Content preview: 
+            Treez is a comprehensive cannabis retail management platform that includes:
+            
+            **Treez Retail (POS)**
+            - Point of Sale system designed specifically for ca...
