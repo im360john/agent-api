@@ -272,7 +272,7 @@ class SlackTreezBot:
                 try:
                     crawl_response = firecrawl.crawl_url(
                         base_url, 
-                        limit=500,
+                        limit=10,  # Reduced for testing
                         scrape_options=ScrapeOptions(
                             formats=['markdown'],
                             maxAge=172800  # Use cache if less than 48 hours old
@@ -288,6 +288,16 @@ class SlackTreezBot:
                 if hasattr(crawl_response, '__dict__'):
                     logger.info(f"Crawl response attributes: {dir(crawl_response)}")
                 
+                # Debug: log the full structure
+                import json
+                try:
+                    if isinstance(crawl_response, dict):
+                        logger.info(f"Crawl response keys: {list(crawl_response.keys())}")
+                    elif hasattr(crawl_response, '__dict__'):
+                        logger.info(f"Crawl response __dict__: {crawl_response.__dict__}")
+                except Exception as e:
+                    logger.info(f"Could not log crawl_response structure: {e}")
+                
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
                     if isinstance(crawl_response, dict):
@@ -302,28 +312,86 @@ class SlackTreezBot:
                     
                     logger.info(f"Crawl returned {len(pages) if isinstance(pages, list) else 0} pages")
                     
+                    # Debug: log the structure of the first page
+                    if isinstance(pages, list) and len(pages) > 0:
+                        logger.info(f"First page type: {type(pages[0])}")
+                        if isinstance(pages[0], dict):
+                            logger.info(f"First page keys: {list(pages[0].keys())}")
+                            # Log if markdown exists
+                            logger.info(f"First page has 'markdown': {'markdown' in pages[0]}")
+                            logger.info(f"First page has 'content': {'content' in pages[0]}")
+                        elif hasattr(pages[0], '__dict__'):
+                            logger.info(f"First page attributes: {dir(pages[0])}")
+                    
                     # Process in batches of 10 to avoid memory issues
                     batch_size = 10
                     documents = []
+                    total_processed = 0
+                    total_with_content = 0
+                    total_treez_urls = 0
                     
                     for i, page_data in enumerate(pages if isinstance(pages, list) else []):
-                        if 'markdown' in page_data and page_data['markdown']:
-                            # Only process pages from support.treez.io
-                            page_url = page_data.get('url', page_data.get('metadata', {}).get('sourceURL', ''))
-                            if not page_url.startswith('https://support.treez.io'):
+                        # Debug log for each page
+                        logger.info(f"Processing page {i+1}...")
+                        total_processed += 1
+                        
+                        # Check different possible content fields
+                        content = None
+                        if isinstance(page_data, dict):
+                            content = page_data.get('markdown') or page_data.get('content') or page_data.get('text')
+                        elif hasattr(page_data, 'markdown'):
+                            content = page_data.markdown
+                        elif hasattr(page_data, 'content'):
+                            content = page_data.content
+                        
+                        if not content:
+                            logger.warning(f"Page {i+1} has no content in 'markdown', 'content', or 'text' fields")
+                            if isinstance(page_data, dict):
+                                logger.warning(f"Available keys: {list(page_data.keys())}")
+                        
+                        if content:
+                            total_with_content += 1
+                            # Extract URL from various possible fields
+                            page_url = None
+                            if isinstance(page_data, dict):
+                                page_url = page_data.get('url') or page_data.get('sourceURL')
+                                if not page_url and 'metadata' in page_data:
+                                    page_url = page_data['metadata'].get('url') or page_data['metadata'].get('sourceURL')
+                            elif hasattr(page_data, 'url'):
+                                page_url = page_data.url
+                            elif hasattr(page_data, 'sourceURL'):
+                                page_url = page_data.sourceURL
+                            
+                            if not page_url:
+                                logger.warning(f"Page {i+1} has no URL, skipping...")
                                 continue
                             
+                            # Only process pages from support.treez.io
+                            if not page_url.startswith('https://support.treez.io'):
+                                logger.info(f"Skipping non-Treez URL: {page_url}")
+                                continue
+                            
+                            total_treez_urls += 1
                             logger.info(f"Processing document {i+1}: {page_url}")
                             
                             # Calculate content hash for deduplication
-                            content_hash = hashlib.md5(page_data['markdown'].encode()).hexdigest()
+                            content_hash = hashlib.md5(content.encode()).hexdigest()
                             
                             # Extract title
-                            title = page_data.get('title', page_data.get('metadata', {}).get('title', 'Untitled'))
+                            title = None
+                            if isinstance(page_data, dict):
+                                title = page_data.get('title')
+                                if not title and 'metadata' in page_data:
+                                    title = page_data['metadata'].get('title')
+                            elif hasattr(page_data, 'title'):
+                                title = page_data.title
+                            
+                            if not title:
+                                title = 'Untitled'
                             
                             # Create document
                             doc = Document(
-                                content=page_data['markdown'],
+                                content=content,
                                 meta_data={
                                     "title": title,
                                     "source": page_url,
@@ -351,6 +419,14 @@ class SlackTreezBot:
                                 results["failed"] += len(documents)
                             finally:
                                 documents = []  # Reset for next batch
+                    
+                    # Log summary
+                    logger.info(f"\n=== CRAWL SUMMARY ===")
+                    logger.info(f"Total pages crawled: {total_processed}")
+                    logger.info(f"Pages with content: {total_with_content}")
+                    logger.info(f"Treez URLs found: {total_treez_urls}")
+                    logger.info(f"Documents added to knowledge base: {results['updated']}")
+                    logger.info(f"===================\n")
                     
                     results["urls"].append(base_url)
                 else:
