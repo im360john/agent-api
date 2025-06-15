@@ -412,9 +412,53 @@ async def seed_knowledge_base(agent: Agent):
     ]
     
     try:
-        # First ensure the table exists by loading the knowledge base
-        logger.info("Initializing knowledge base table...")
-        await agent.knowledge.aload(recreate=False, upsert=True)
+        # Get the vector database from the knowledge base
+        if hasattr(agent.knowledge, '_kb') and hasattr(agent.knowledge._kb, 'vector_db'):
+            vector_db = agent.knowledge._kb.vector_db
+        elif hasattr(agent.knowledge, 'vector_db'):
+            vector_db = agent.knowledge.vector_db
+        else:
+            # Try to access the actual TextKnowledgeBase
+            if hasattr(agent.knowledge, 'knowledge') and hasattr(agent.knowledge.knowledge, 'vector_db'):
+                vector_db = agent.knowledge.knowledge.vector_db
+            else:
+                raise ValueError("Cannot access vector database from knowledge base")
+        
+        # Ensure the table exists by running create_table SQL directly
+        logger.info("Ensuring vector database table exists...")
+        try:
+            # Try to use the vector_db's connection to create table
+            if hasattr(vector_db, 'db'):
+                from sqlalchemy import text
+                async with vector_db.db.begin() as conn:
+                    # First ensure schema exists
+                    await conn.execute(text("CREATE SCHEMA IF NOT EXISTS ai"))
+                    
+                    # Create the table with proper structure
+                    create_table_sql = """
+                    CREATE TABLE IF NOT EXISTS ai.treez_support_articles (
+                        id VARCHAR PRIMARY KEY,
+                        name VARCHAR,
+                        meta_data JSONB,
+                        filters JSONB,
+                        content TEXT,
+                        embedding VECTOR(1536),
+                        usage JSONB,
+                        content_hash VARCHAR
+                    );
+                    
+                    CREATE INDEX IF NOT EXISTS idx_treez_support_articles_embedding 
+                    ON ai.treez_support_articles USING ivfflat (embedding vector_cosine_ops);
+                    """
+                    await conn.execute(text(create_table_sql))
+                    logger.info("Table created successfully")
+            else:
+                # Fallback - try to trigger table creation
+                logger.warning("Cannot access database connection directly, trying fallback")
+                if hasattr(vector_db, 'create_table'):
+                    await vector_db.create_table()
+        except Exception as e:
+            logger.warning(f"Table creation attempt failed (may already exist): {e}")
         
         # Convert seed content to Document objects
         documents = []
@@ -428,14 +472,6 @@ async def seed_knowledge_base(agent: Agent):
                 }
             )
             documents.append(doc)
-        
-        # Get the vector database from the knowledge base
-        if hasattr(agent.knowledge, '_kb') and hasattr(agent.knowledge._kb, 'vector_db'):
-            vector_db = agent.knowledge._kb.vector_db
-        elif hasattr(agent.knowledge, 'vector_db'):
-            vector_db = agent.knowledge.vector_db
-        else:
-            raise ValueError("Cannot access vector database from knowledge base")
         
         # Upsert documents into the vector database
         logger.info(f"Inserting {len(documents)} documents into vector database")
