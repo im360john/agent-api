@@ -50,7 +50,7 @@ def get_slack_treez_agent(
         logger.warning("FIRECRAWL_API_KEY not found - Knowledge base updates may be limited")
     
     # Database configuration from environment or defaults
-    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg://rag_user:qGufXd7ddboX07VgmEqess0spXiXcmyu@dpg-d0poargdl3ps73b0c630-a.oregon-postgres.render.com:5432/agno")
+    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg://user:password@location/agno")
     
     # Handle legacy postgres:// URLs
     if db_url.startswith("postgres://"):
