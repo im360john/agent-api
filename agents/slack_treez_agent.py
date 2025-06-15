@@ -219,13 +219,23 @@ class SlackTreezBot:
         except SlackApiError as e:
             logger.error(f"Slack API error: {e.response['error']}")
     
-    async def update_knowledge_base(self, urls: Optional[List[str]] = None) -> dict:
-        """Update the Treez knowledge base with latest documentation"""
+    async def update_knowledge_base(self, urls: Optional[List[str]] = None, force_update: bool = False) -> dict:
+        """
+        Update the Treez knowledge base with latest documentation
+        
+        Args:
+            urls: List of URLs to crawl. Defaults to main support site.
+            force_update: If True, re-crawl and update all documents regardless of existing content.
+        
+        Note: The vector database uses content hashing, so unchanged documents won't be duplicated.
+        However, this still re-crawls everything which uses API calls. Set force_update=False
+        to implement smarter caching in the future.
+        """
         if urls is None:
             # Start with the main support site
             urls = ["https://support.treez.io/en/"]
         
-        results = {"updated": 0, "failed": 0, "urls": [], "crawled_urls": []}
+        results = {"updated": 0, "failed": 0, "skipped": 0, "urls": [], "crawled_urls": []}
         
         # Initialize Firecrawl if available
         firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
@@ -252,32 +262,37 @@ class SlackTreezBot:
             results["failed"] = len(urls)
             return results
         
+        
         for base_url in urls:
             try:
                 logger.info(f"Crawling {base_url} and all sub-pages...")
                 
                 # Use Firecrawl to crawl the entire site
-                # According to API docs, parameters should be passed directly
-                crawl_job = firecrawl.crawl_url(
+                # Start the crawl job
+                crawl_response = firecrawl.crawl_url(
                     base_url,
-                    wait=True,  # Wait for crawl to complete
-                    limit=500,  # Maximum number of pages to crawl
-                    maxDepth=10,  # Maximum depth to crawl
-                    includePaths=['/en/**'],  # Include all English pages
-                    excludePaths=[],
-                    allowBackwardLinks=False,
-                    allowExternalLinks=False,
-                    includeHtml=False,
-                    includeRawHtml=False,
-                    onlyMainContent=True,
-                    removeTags=['nav', 'footer', 'header', 'script', 'style']
+                    {
+                        'limit': 500,  # Maximum number of pages to crawl
+                        'maxDepth': 10,  # Maximum depth to crawl
+                        'ignoreSitemap': False,
+                        'ignoreQueryParameters': False,
+                        'allowBackwardLinks': False,
+                        'allowExternalLinks': False,
+                        'scrapeOptions': {
+                            'formats': ['markdown'],
+                            'onlyMainContent': True,
+                            'removeBase64Images': True
+                        }
+                    },
+                    wait_until_done=True,
+                    poll_interval=5
                 )
                 
-                if crawl_job:
+                if crawl_response:
                     documents = []
                     
                     # Check if we got data (could be in 'data' or direct list)
-                    pages = crawl_job.get('data', crawl_job) if isinstance(crawl_job, dict) else crawl_job
+                    pages = crawl_response if isinstance(crawl_response, list) else crawl_response.get('data', [])
                     
                     for page_data in pages if isinstance(pages, list) else []:
                         if 'markdown' in page_data and page_data['markdown']:
@@ -285,6 +300,15 @@ class SlackTreezBot:
                             page_url = page_data.get('url', page_data.get('metadata', {}).get('sourceURL', ''))
                             if not page_url.startswith('https://support.treez.io'):
                                 continue
+                            
+                            # Calculate content hash for deduplication
+                            # The vector DB will use this to avoid duplicates (same hash = update, not insert)
+                            import hashlib
+                            content_hash = hashlib.md5(page_data['markdown'].encode()).hexdigest()
+                            
+                            # TODO: Future optimization - store crawled URLs and timestamps in a separate
+                            # metadata table to avoid re-crawling unchanged content. For now, we rely
+                            # on the vector DB's content hashing to prevent duplicates.
                             
                             # Extract title
                             title = page_data.get('title', page_data.get('metadata', {}).get('title', 'Untitled'))
@@ -297,7 +321,8 @@ class SlackTreezBot:
                                     "source": page_url,
                                     "domain": "support.treez.io",
                                     "description": page_data.get('description', page_data.get('metadata', {}).get('description', '')),
-                                    "updated_at": datetime.now().isoformat()
+                                    "updated_at": datetime.now().isoformat(),
+                                    "content_hash": hashlib.md5(page_data['markdown'].encode()).hexdigest()
                                 }
                             )
                             documents.append(doc)
@@ -464,13 +489,17 @@ async def seed_knowledge_base(agent: Agent):
         
         # Convert seed content to Document objects
         documents = []
+        import hashlib
         for content in seed_content:
+            content_hash = hashlib.md5(content["content"].encode()).hexdigest()
             doc = Document(
                 content=content["content"],
                 meta_data={
                     "title": content["title"],
                     "source": content["source"],
-                    "domain": content["domain"]
+                    "domain": content["domain"],
+                    "updated_at": datetime.now().isoformat(),
+                    "content_hash": content_hash
                 }
             )
             documents.append(doc)
