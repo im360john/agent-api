@@ -355,9 +355,19 @@ async def seed_knowledge_base(agent: Agent):
             )
             documents.append(doc)
         
-        # Load documents into knowledge base
-        agent.knowledge.load(documents=documents)
-        logger.info("Successfully seeded knowledge base with initial content")
+        # Get the vector database from the knowledge base
+        if hasattr(agent.knowledge, '_kb') and hasattr(agent.knowledge._kb, 'vector_db'):
+            vector_db = agent.knowledge._kb.vector_db
+        elif hasattr(agent.knowledge, 'vector_db'):
+            vector_db = agent.knowledge.vector_db
+        else:
+            raise ValueError("Cannot access vector database from knowledge base")
+        
+        # Upsert documents into the vector database
+        logger.info(f"Inserting {len(documents)} documents into vector database")
+        await vector_db.upsert(documents=documents)
+        
+        logger.info("Knowledge base seeded successfully with initial content")
         return True
     except Exception as e:
         logger.error(f"Failed to seed knowledge base: {str(e)}")
