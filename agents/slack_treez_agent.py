@@ -222,37 +222,107 @@ class SlackTreezBot:
     async def update_knowledge_base(self, urls: Optional[List[str]] = None) -> dict:
         """Update the Treez knowledge base with latest documentation"""
         if urls is None:
-            urls = [
-                "https://support.treez.io/en/",
-                "https://support.treez.io/en/collections/2952252-treez-retail",
-                "https://support.treez.io/en/collections/2554666-treez-ecommerce",
-                "https://support.treez.io/en/collections/3783596-treez-payments",
-                "https://support.treez.io/en/collections/5720204-compliance",
-                "https://support.treez.io/en/collections/2958914-integrations"
-            ]
+            # Start with the main support site
+            urls = ["https://support.treez.io/en/"]
         
-        results = {"updated": 0, "failed": 0, "urls": []}
+        results = {"updated": 0, "failed": 0, "urls": [], "crawled_urls": []}
         
-        for url in urls:
+        # Initialize Firecrawl if available
+        firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+        if not firecrawl_api_key:
+            logger.error("FIRECRAWL_API_KEY not found - cannot crawl documentation")
+            results["failed"] = len(urls)
+            return results
+        
+        try:
+            from firecrawl import FirecrawlApp
+            firecrawl = FirecrawlApp(api_key=firecrawl_api_key)
+        except ImportError:
+            logger.error("firecrawl-py not installed")
+            results["failed"] = len(urls)
+            return results
+        
+        # Get vector database
+        if hasattr(self.agent.knowledge, '_kb') and hasattr(self.agent.knowledge._kb, 'vector_db'):
+            vector_db = self.agent.knowledge._kb.vector_db
+        elif hasattr(self.agent.knowledge, 'vector_db'):
+            vector_db = self.agent.knowledge.vector_db
+        else:
+            logger.error("Cannot access vector database from knowledge base")
+            results["failed"] = len(urls)
+            return results
+        
+        for base_url in urls:
             try:
-                # Use agent to crawl and extract content
-                crawl_response = self.agent.run(
-                    f"Crawl {url} and extract all documentation content, including sub-pages. Return the content in a structured format."
-                )
+                logger.info(f"Crawling {base_url} and all sub-pages...")
                 
-                if crawl_response and crawl_response.content:
-                    # Add to knowledge base
-                    domain = urlparse(url).netloc
-                    self.agent.knowledge.load_data({
-                        "source": url,
-                        "domain": domain,
-                        "content": crawl_response.content,
-                        "updated_at": datetime.now().isoformat()
-                    })
-                    results["updated"] += 1
-                    results["urls"].append(url)
+                # Use Firecrawl to crawl the entire site
+                crawl_params = {
+                    'crawlerOptions': {
+                        'includes': ['/en/**'],  # Include all English pages
+                        'excludes': [],
+                        'generateImgAltText': False,
+                        'returnOnlyUrls': False,
+                        'maxDepth': 10,  # Deep crawl to get all articles
+                        'mode': 'crawl',
+                        'ignoreSitemap': False,
+                        'limit': 500,  # Limit to prevent infinite crawling
+                        'allowBackwardCrawling': False,
+                        'allowExternalContentLinks': False
+                    },
+                    'pageOptions': {
+                        'includeHtml': False,
+                        'includeRawHtml': False,
+                        'onlyIncludeTags': ['main', 'article', 'section'],
+                        'removeTags': ['nav', 'footer', 'header', 'script', 'style'],
+                        'onlyMainContent': True,
+                        'waitFor': 1000
+                    }
+                }
+                
+                # Start crawl job
+                crawl_job = firecrawl.crawl_url(base_url, params=crawl_params)
+                
+                if crawl_job and 'data' in crawl_job:
+                    documents = []
+                    
+                    for page_data in crawl_job['data']:
+                        if 'markdown' in page_data and page_data['markdown']:
+                            # Only process pages from support.treez.io
+                            page_url = page_data.get('metadata', {}).get('sourceURL', '')
+                            if not page_url.startswith('https://support.treez.io'):
+                                continue
+                            
+                            # Extract title
+                            title = page_data.get('metadata', {}).get('title', 'Untitled')
+                            
+                            # Create document
+                            doc = Document(
+                                content=page_data['markdown'],
+                                meta_data={
+                                    "title": title,
+                                    "source": page_url,
+                                    "domain": "support.treez.io",
+                                    "description": page_data.get('metadata', {}).get('description', ''),
+                                    "updated_at": datetime.now().isoformat()
+                                }
+                            )
+                            documents.append(doc)
+                            results["crawled_urls"].append(page_url)
+                    
+                    # Batch upsert documents
+                    if documents:
+                        logger.info(f"Upserting {len(documents)} documents from {base_url}")
+                        await vector_db.upsert(documents=documents)
+                        results["updated"] += len(documents)
+                        results["urls"].append(base_url)
+                    
+                else:
+                    logger.error(f"No data returned from crawl of {base_url}")
+                    results["failed"] += 1
+                    
             except Exception as e:
-                logger.error(f"Failed to update knowledge from {url}: {str(e)}")
+                logger.error(f"Failed to crawl and update knowledge from {base_url}: {str(e)}")
                 results["failed"] += 1
         
         return results
@@ -342,6 +412,10 @@ async def seed_knowledge_base(agent: Agent):
     ]
     
     try:
+        # First ensure the table exists by loading the knowledge base
+        logger.info("Initializing knowledge base table...")
+        await agent.knowledge.aload(recreate=False, upsert=True)
+        
         # Convert seed content to Document objects
         documents = []
         for content in seed_content:
