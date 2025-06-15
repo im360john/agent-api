@@ -21,11 +21,18 @@ async def test_update_knowledge_base():
     load_dotenv()
     
     # Verify required environment variables
-    required_vars = ["OPENAI_API_KEY", "FIRECRAWL_API_KEY", "DATABASE_URL"]
+    required_vars = ["OPENAI_API_KEY", "FIRECRAWL_API_KEY"]
     for var in required_vars:
         if not os.getenv(var):
             logger.error(f"Missing required environment variable: {var}")
             return
+    
+    # Check DATABASE_URL
+    if not os.getenv("DATABASE_URL"):
+        logger.warning("DATABASE_URL not set. Using default: postgresql+psycopg://ai:ai@localhost:5432/ai")
+        logger.warning("Make sure PostgreSQL is running locally with database 'ai' and user 'ai'")
+        logger.warning("Or set DATABASE_URL in your .env file, e.g.:")
+        logger.warning("DATABASE_URL=postgresql+psycopg://user:password@host:port/database")
     
     try:
         # Create agent
