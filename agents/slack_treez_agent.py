@@ -74,7 +74,7 @@ def get_slack_treez_agent(
     # Set up knowledge base with PgVector
     knowledge_base = TextKnowledgeBase(
         vector_db=PgVector(
-            table_name="treez_support_articles",
+            table_name="ai.treez_support_articles",  # Include schema name
             db_url=db_url,
             search_type=SearchType.hybrid,
             embedder=OpenAIEmbedder(
@@ -281,6 +281,7 @@ class SlackTreezBot:
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
                     pages = crawl_response if isinstance(crawl_response, list) else crawl_response.get('data', [])
+                    logger.info(f"Crawl returned {len(pages) if isinstance(pages, list) else 0} pages")
                     
                     # Process in batches of 10 to avoid memory issues
                     batch_size = 10
@@ -319,12 +320,18 @@ class SlackTreezBot:
                         # Process batch when it reaches the batch size or at the end
                         if len(documents) >= batch_size or (i == len(pages) - 1 and documents):
                             logger.info(f"Upserting batch of {len(documents)} documents")
-                            # Check if upsert is async or sync
-                            result = vector_db.upsert(documents=documents)
-                            if result is not None and hasattr(result, '__await__'):
-                                await result
-                            results["updated"] += len(documents)
-                            documents = []  # Reset for next batch
+                            try:
+                                # Check if upsert is async or sync
+                                result = vector_db.upsert(documents=documents)
+                                if result is not None and hasattr(result, '__await__'):
+                                    await result
+                                results["updated"] += len(documents)
+                                logger.info(f"Successfully upserted {len(documents)} documents")
+                            except Exception as e:
+                                logger.error(f"Error upserting documents: {str(e)}")
+                                results["failed"] += len(documents)
+                            finally:
+                                documents = []  # Reset for next batch
                     
                     results["urls"].append(base_url)
                 else:
