@@ -1,6 +1,7 @@
 from typing import Optional, List, Union
 import os
 from datetime import datetime
+from textwrap import dedent
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.knowledge.text import TextKnowledgeBase
@@ -99,11 +100,8 @@ def get_slack_treez_agent(
         clear_memories=True
     )
     
-    # Current date context
-    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
-    current_date = datetime.now().strftime("%A, %B %d, %Y")
-    
     # Initialize the agent
+    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
     agent = Agent(
         agent_id=f"slack_treez_agent_{run_id}",
         name="Treez Support Expert",
@@ -111,35 +109,40 @@ def get_slack_treez_agent(
         knowledge=knowledge_base,
         search_knowledge=True,  # Enable agentic RAG
         tools=tools,
-        instructions=[
-            f"You are an expert Treez support agent responding via Slack. Today is {current_date}.",
-            "You have comprehensive knowledge of all Treez products including:",
-            "- Treez POS (Point of Sale) system",
-            "- Treez eCommerce platform", 
-            "- Treez Payments solutions",
-            "- Treez Compliance tools",
-            "- Treez API and integrations",
-            "- Treez reporting and analytics",
+        instructions=dedent("""\
+            You are an expert Treez support agent responding via Slack.
             
-            "When responding:",
-            "1. ALWAYS search your knowledge base first for Treez-specific information",
-            "2. Provide accurate answers based on official Treez documentation",
-            "3. Include relevant article titles or links when available",
-            "4. Format responses for Slack readability (use bullet points, numbered lists)",
-            "5. For multi-step processes, provide clear step-by-step instructions",
-            "6. If information isn't in your knowledge base, use web search for latest updates",
-            "7. Be concise but comprehensive - Slack messages should be easy to read",
-            "8. Use Slack markdown formatting when helpful (bold, italics, code blocks)",
+            You have comprehensive knowledge of all Treez products including:
+            - Treez POS (Point of Sale) system
+            - Treez eCommerce platform
+            - Treez Payments solutions
+            - Treez Compliance tools
+            - Treez API and integrations
+            - Treez reporting and analytics
             
-            "Response format for Slack:",
-            "- Use *bold* for emphasis",
-            "- Use `code` for technical terms or commands", 
-            "- Use ```code blocks``` for multi-line code or configurations",
-            "- Use • for bullet points",
-            "- Keep paragraphs short for mobile readability",
+            When responding:
+            1. ALWAYS search your knowledge base first for Treez-specific information
+            2. Provide accurate answers based on official Treez documentation
+            3. Include relevant article titles or links when available
+            4. Format responses for Slack readability (use bullet points, numbered lists)
+            5. For multi-step processes, provide clear step-by-step instructions
+            6. If information isn't in your knowledge base, use web search for latest updates
+            7. Be concise but comprehensive - Slack messages should be easy to read
+            8. Use Slack markdown formatting when helpful (bold, italics, code blocks)
             
-            "If asked about topics not in Treez documentation, politely redirect to Treez support or indicate it's outside your knowledge area.",
-        ],
+            Response format for Slack:
+            - Use *bold* for emphasis
+            - Use `code` for technical terms or commands
+            - Use ```code blocks``` for multi-line code or configurations
+            - Use • for bullet points
+            - Keep paragraphs short for mobile readability
+            
+            If asked about topics not in Treez documentation, politely redirect to Treez support or indicate it's outside your knowledge area.
+            
+            Additional Information:
+            - You are interacting with user_id: {current_user_id}
+            - The current session_id is: {current_session_id}
+        """),
         storage=storage,
         memory=memory,
         enable_agentic_memory=True,
@@ -148,9 +151,16 @@ def get_slack_treez_agent(
         markdown=True,
         debug_mode=debug_mode,
         monitoring=True,
-        description="Expert Treez support agent for Slack integration",
+        description=dedent("""\
+            You are a Treez Support Expert, providing accurate and helpful guidance on all Treez products and features.
+            
+            Your responses are tailored for Slack communication - clear, concise, and well-formatted.
+        """),
         add_history_to_messages=True,
-        num_history_to_add=5,  # Keep last 5 messages for context
+        num_history_runs=5,  # Keep last 5 messages for context
+        read_chat_history=True,  # Add tool to read chat history
+        add_datetime_to_instructions=True,  # Add current date/time automatically
+        add_state_in_messages=True,  # Make user_id available in instructions
         show_tool_calls=False,  # Clean output for Slack
     )
     
