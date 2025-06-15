@@ -76,8 +76,7 @@ def get_slack_treez_agent(
             db_url=db_url,
             search_type=SearchType.hybrid,
             embedder=OpenAIEmbedder(
-                model="text-embedding-3-small",
-                api_key=os.getenv("OPENAI_API_KEY")
+                id="text-embedding-3-small"
             )
         )
     )
