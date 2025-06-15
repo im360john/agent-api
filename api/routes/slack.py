@@ -170,7 +170,7 @@ async def process_slash_command(text: str, response_url: str, user_id: str):
         logger.error(f"Error in background slash command processing: {str(e)}")
 
 @router.post("/slack/knowledge/update")
-async def update_knowledge_base():
+async def update_knowledge_base(background_tasks: BackgroundTasks):
     """
     Update the Treez knowledge base with latest documentation
     
@@ -178,16 +178,20 @@ async def update_knowledge_base():
     """
     try:
         bot = get_slack_bot()
-        results = await bot.update_knowledge_base()
+        
+        # Start the update in the background
+        background_tasks.add_task(bot.update_knowledge_base)
         
         return JSONResponse(content={
-            "status": "success",
-            "message": f"Updated {results['updated']} documents, {results['failed']} failed",
-            "details": results
+            "status": "accepted",
+            "message": "Knowledge base update started in background",
+            "details": {
+                "info": "The crawl operation is running in the background. Check logs for progress."
+            }
         })
     
     except Exception as e:
-        logger.error(f"Error updating knowledge base: {str(e)}")
+        logger.error(f"Error starting knowledge base update: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/slack/knowledge/seed")
