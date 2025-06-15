@@ -268,15 +268,10 @@ class SlackTreezBot:
                 logger.info(f"Crawling {base_url} and all sub-pages...")
                 
                 # Use Firecrawl to crawl the entire site
-                # Use simple parameters that are supported by the SDK
+                # Use only the basic supported parameters
                 crawl_response = firecrawl.crawl_url(
                     base_url,
-                    wait_until_done=True,
-                    poll_interval=5,
-                    limit=500,
-                    scrape_options={
-                        'formats': ['markdown']
-                    }
+                    limit=500
                 )
                 
                 if crawl_response:
