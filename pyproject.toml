@@ -22,6 +22,8 @@ dependencies = [
   "pillow",
   "numpy",
   "scikit-image",
+  "slack-sdk",
+  "httpx",
 ]
 
 [project.optional-dependencies]
