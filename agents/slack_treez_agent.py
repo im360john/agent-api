@@ -93,8 +93,9 @@ def get_slack_treez_agent(
         db_url=db_url
     )
     memory = Memory(
+        model=OpenAIChat(id=model_id),
         db=memory_db,
-        user_id=user_id,
+        delete_memories=True,
         create_user_memories=True,
         create_session_memories=True
     )
