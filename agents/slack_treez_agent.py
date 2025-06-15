@@ -293,22 +293,40 @@ class SlackTreezBot:
                 try:
                     if isinstance(crawl_response, dict):
                         logger.info(f"Crawl response keys: {list(crawl_response.keys())}")
+                        # If it has 'data' key, check what's in it
+                        if 'data' in crawl_response:
+                            logger.info(f"crawl_response['data'] type: {type(crawl_response['data'])}")
+                            if isinstance(crawl_response['data'], list) and len(crawl_response['data']) > 0:
+                                logger.info(f"First data item type: {type(crawl_response['data'][0])}")
                     elif hasattr(crawl_response, '__dict__'):
                         logger.info(f"Crawl response __dict__: {crawl_response.__dict__}")
+                    elif hasattr(crawl_response, 'data'):
+                        logger.info(f"Crawl response has 'data' attribute")
+                        logger.info(f"crawl_response.data type: {type(crawl_response.data)}")
                 except Exception as e:
                     logger.info(f"Could not log crawl_response structure: {e}")
                 
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
+                    pages = None
                     if isinstance(crawl_response, dict):
                         pages = crawl_response.get('data', [])
                     elif isinstance(crawl_response, list):
                         pages = crawl_response
                     elif hasattr(crawl_response, 'data'):
                         pages = crawl_response.data
-                    else:
-                        logger.error(f"Unexpected crawl_response structure: {crawl_response}")
-                        pages = []
+                        logger.info(f"Got pages from crawl_response.data")
+                    
+                    # If pages is still None, try to access it as an iterable
+                    if pages is None:
+                        try:
+                            # Maybe crawl_response itself is iterable
+                            pages = list(crawl_response)
+                            logger.info(f"Got pages by converting crawl_response to list")
+                        except:
+                            logger.error(f"Unexpected crawl_response structure: {type(crawl_response)}")
+                            logger.error(f"crawl_response dir: {dir(crawl_response) if hasattr(crawl_response, '__dir__') else 'no dir'}")
+                            pages = []
                     
                     logger.info(f"Crawl returned {len(pages) if isinstance(pages, list) else 0} pages")
                     
@@ -320,8 +338,11 @@ class SlackTreezBot:
                             # Log if markdown exists
                             logger.info(f"First page has 'markdown': {'markdown' in pages[0]}")
                             logger.info(f"First page has 'content': {'content' in pages[0]}")
+                            # Log sample of first page data to understand structure
+                            logger.info(f"First page sample: {str(pages[0])[:500]}...")
                         elif hasattr(pages[0], '__dict__'):
                             logger.info(f"First page attributes: {dir(pages[0])}")
+                            logger.info(f"First page __dict__: {pages[0].__dict__}")
                     
                     # Process in batches of 10 to avoid memory issues
                     batch_size = 10
