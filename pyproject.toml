@@ -30,6 +30,7 @@ dependencies = [
   "pytesseract>=0.3.10",
   "google-cloud-vision>=3.5.0",
   "imagehash>=4.3.1",
+  "firecrawl-py",
 ]
 
 [project.optional-dependencies]
