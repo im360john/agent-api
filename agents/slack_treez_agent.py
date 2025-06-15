@@ -273,10 +273,10 @@ class SlackTreezBot:
                     crawl_response = firecrawl.crawl_url(
                         base_url, 
                         limit=500,
-                        scrape_options={
-                            'formats': ['markdown'],
-                            'maxAge': 172800  # Use cache if less than 48 hours old
-                        }
+                        scrape_options=ScrapeOptions(
+                            formats=['markdown'],
+                            maxAge=172800  # Use cache if less than 48 hours old
+                        )
                     )
                 except Exception as e:
                     logger.error(f"Error during crawl_url: {str(e)}")
