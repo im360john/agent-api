@@ -5,7 +5,7 @@ import os
 from firecrawl import FirecrawlApp, ScrapeOptions
 
 # Get API key
-api_key = os.getenv("FIRECRAWL_API_KEY", "fc-05935e879f594170b09e54181f4dd5f0")
+api_key = os.getenv("FIRECRAWL_API_KEY", "aa")
 
 # Initialize Firecrawl
 app = FirecrawlApp(api_key=api_key)
