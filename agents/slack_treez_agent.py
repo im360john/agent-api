@@ -326,19 +326,66 @@ class SlackTreezBot:
                     elif hasattr(page_data, 'metadata') and isinstance(page_data.metadata, dict):
                         title = page_data.metadata.get('title') or page_data.metadata.get('ogTitle')
                     
-                    # Create document
-                    doc = Document(
-                        content=content,
-                        meta_data={
-                            "title": title or 'Untitled',
-                            "source": page_url,
-                            "domain": "support.treez.io",
-                            "description": "",
-                            "updated_at": datetime.now().isoformat(),
-                            "content_hash": content_hash
-                        }
-                    )
-                    documents.append(doc)
+                    # Check content length and chunk if necessary
+                    # Rough estimate: 1 token ≈ 4 characters, max 8192 tokens ≈ 32768 chars
+                    # Use 30000 to be safe
+                    max_content_length = 30000
+                    
+                    if len(content) > max_content_length:
+                        # Chunk the content
+                        chunks = []
+                        words = content.split()
+                        current_chunk = []
+                        current_length = 0
+                        
+                        for word in words:
+                            word_length = len(word) + 1  # +1 for space
+                            if current_length + word_length > max_content_length:
+                                # Save current chunk
+                                chunks.append(' '.join(current_chunk))
+                                current_chunk = [word]
+                                current_length = word_length
+                            else:
+                                current_chunk.append(word)
+                                current_length += word_length
+                        
+                        # Add final chunk
+                        if current_chunk:
+                            chunks.append(' '.join(current_chunk))
+                        
+                        logger.info(f"Document too large ({len(content)} chars), splitting into {len(chunks)} chunks")
+                        
+                        # Create documents for each chunk
+                        for i, chunk in enumerate(chunks):
+                            chunk_doc = Document(
+                                content=chunk,
+                                meta_data={
+                                    "title": f"{title or 'Untitled'} (Part {i+1}/{len(chunks)})",
+                                    "source": page_url,
+                                    "domain": "support.treez.io",
+                                    "description": "",
+                                    "updated_at": datetime.now().isoformat(),
+                                    "content_hash": content_hash,
+                                    "chunk_index": i,
+                                    "total_chunks": len(chunks)
+                                }
+                            )
+                            documents.append(chunk_doc)
+                    else:
+                        # Normal document
+                        doc = Document(
+                            content=content,
+                            meta_data={
+                                "title": title or 'Untitled',
+                                "source": page_url,
+                                "domain": "support.treez.io",
+                                "description": "",
+                                "updated_at": datetime.now().isoformat(),
+                                "content_hash": content_hash
+                            }
+                        )
+                        documents.append(doc)
+                    
                     results["crawled_urls"].append(page_url)
                     
                     # Process batch when ready
