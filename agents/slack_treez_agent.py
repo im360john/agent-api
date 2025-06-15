@@ -244,9 +244,6 @@ class SlackTreezBot:
         
         try:
             from firecrawl import FirecrawlApp
-            import nest_asyncio
-            # Apply nest_asyncio for async compatibility
-            nest_asyncio.apply()
             firecrawl = FirecrawlApp(api_key=firecrawl_api_key)
         except ImportError as e:
             logger.error(f"Required package not installed: {e}")
