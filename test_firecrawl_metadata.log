@@ -1,0 +1,10 @@
+Scraping single page...
+Traceback (most recent call last):
+  File "/home/john/repos/agent-api/test_firecrawl_metadata.py", line 18, in <module>
+    result = app.scrape_url("https://support.treez.io/en/", params={'formats': ['markdown']})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/firecrawl/firecrawl.py", line 586, in scrape_url
+    self._handle_error(response, 'scrape URL')
+  File "/usr/local/lib/python3.11/dist-packages/firecrawl/firecrawl.py", line 2234, in _handle_error
+    raise requests.exceptions.HTTPError(message, response=response)
+requests.exceptions.HTTPError: Unexpected error during scrape URL: Status code 400. Bad Request - [{'code': 'unrecognized_keys', 'keys': ['params'], 'path': [], 'message': 'Unrecognized key in body -- please review the v1 API documentation for request body changes'}]

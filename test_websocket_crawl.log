@@ -1,0 +1,8 @@
+2025-06-15 23:12:05,674 - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 23:12:07,296 - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 23:12:07,296 - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 23:12:07,296 - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
+2025-06-15 23:12:07,297 - INFO - Starting WebSocket crawl with real-time processing...
+/usr/local/lib/python3.11/dist-packages/firecrawl/firecrawl.py:2606: RuntimeWarning: coroutine 'SlackTreezBot.update_knowledge_base.<locals>.on_document' was never awaited
+  handler(detail)
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback

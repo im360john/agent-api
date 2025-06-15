@@ -18,6 +18,7 @@ from slack_sdk.errors import SlackApiError
 import asyncio
 import json
 import logging
+import hashlib
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def get_slack_treez_agent(
         logger.warning("FIRECRAWL_API_KEY not found - Knowledge base updates may be limited")
     
     # Database configuration from environment or defaults
-    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg://ai:ai@localhost:5432/ai")
+    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg://rag_user:qGufXd7ddboX07VgmEqess0spXiXcmyu@dpg-d0poargdl3ps73b0c630-a.oregon-postgres.render.com:5432/agno")
     
     # Handle legacy postgres:// URLs
     if db_url.startswith("postgres://"):
@@ -234,7 +235,7 @@ class SlackTreezBot:
             # Start with the main support site
             urls = ["https://support.treez.io/en/"]
         
-        results = {"updated": 0, "failed": 0, "skipped": 0, "urls": [], "crawled_urls": []}
+        results = {"updated": 0, "failed": 0, "skipped": 0, "content_updated": 0, "urls": [], "crawled_urls": []}
         
         # Initialize Firecrawl if available
         firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
@@ -267,107 +268,165 @@ class SlackTreezBot:
             try:
                 logger.info(f"Crawling {base_url} and all sub-pages (using 48-hour cache for unchanged content)...")
                 
-                # Use regular crawl with caching to avoid recrawling unchanged content
-                # maxAge: 172800 seconds = 48 hours
-                try:
-                    crawl_response = firecrawl.crawl_url(
-                        base_url, 
-                        limit=5,  # Reduced for faster testing
-                        scrape_options=ScrapeOptions(
-                            formats=['markdown'],
-                            maxAge=172800  # Use cache if less than 48 hours old
-                        )
-                    )
-                except Exception as e:
-                    logger.error(f"Error during crawl_url: {str(e)}")
-                    logger.error(f"Error type: {type(e)}")
-                    logger.error(f"Full traceback:", exc_info=True)
-                    raise
+                # Use async crawling with polling for real-time processing
+                # Initialize processing state
+                documents = []
+                batch_size = 10
+                total_processed = 0
+                total_with_content = 0
+                total_treez_urls = 0
+                total_skipped = 0
+                total_updated = 0
+                total_failed = 0
+                first_batch_uploaded = False
+                upload_verified = False
+                processed_urls = set()  # Track processed URLs to avoid duplicates
                 
-                logger.info(f"Crawl response type: {type(crawl_response)}")
-                if hasattr(crawl_response, '__dict__'):
-                    logger.info(f"Crawl response attributes: {dir(crawl_response)}")
-                
-                # Debug: log the full structure
-                import json
-                try:
-                    if isinstance(crawl_response, dict):
-                        logger.info(f"Crawl response keys: {list(crawl_response.keys())}")
-                        # If it has 'data' key, check what's in it
-                        if 'data' in crawl_response:
-                            logger.info(f"crawl_response['data'] type: {type(crawl_response['data'])}")
-                            if isinstance(crawl_response['data'], list) and len(crawl_response['data']) > 0:
-                                logger.info(f"First data item type: {type(crawl_response['data'][0])}")
-                    elif hasattr(crawl_response, '__dict__'):
-                        logger.info(f"Crawl response __dict__: {crawl_response.__dict__}")
-                    elif hasattr(crawl_response, 'data'):
-                        logger.info(f"Crawl response has 'data' attribute")
-                        logger.info(f"crawl_response.data type: {type(crawl_response.data)}")
-                except Exception as e:
-                    logger.info(f"Could not log crawl_response structure: {e}")
-                
-                if crawl_response:
-                    # Check if we got data (could be in 'data' or direct list)
-                    pages = None
-                    if isinstance(crawl_response, dict):
-                        pages = crawl_response.get('data', [])
-                    elif isinstance(crawl_response, list):
-                        pages = crawl_response
-                    elif hasattr(crawl_response, 'data'):
-                        pages = crawl_response.data
-                        logger.info(f"Got pages from crawl_response.data")
+                async def process_document(page_data, page_url, content):
+                    """Process a single document with deduplication"""
+                    nonlocal documents, total_skipped, total_updated, first_batch_uploaded, upload_verified
                     
-                    # If pages is still None, try to access it as an iterable
-                    if pages is None:
+                    # Calculate content hash
+                    content_hash = hashlib.md5(content.encode()).hexdigest()
+                    
+                    # Check for existing document
+                    skip_document = False
+                    if not force_update:
                         try:
-                            # Maybe crawl_response itself is iterable
-                            pages = list(crawl_response)
-                            logger.info(f"Got pages by converting crawl_response to list")
-                        except:
-                            logger.error(f"Unexpected crawl_response structure: {type(crawl_response)}")
-                            logger.error(f"crawl_response dir: {dir(crawl_response) if hasattr(crawl_response, '__dir__') else 'no dir'}")
-                            pages = []
+                            existing_docs = vector_db.search(
+                                query=page_url,
+                                limit=10
+                            )
+                            
+                            for doc in existing_docs:
+                                if doc.meta_data.get("source", "") == page_url:
+                                    if doc.meta_data.get("content_hash", "") == content_hash:
+                                        logger.debug(f"Skipping unchanged: {page_url}")
+                                        total_skipped += 1
+                                        skip_document = True
+                                        break
+                                    else:
+                                        logger.info(f"Content changed, updating: {page_url}")
+                                        total_updated += 1
+                                        break
+                        except Exception as e:
+                            logger.debug(f"Could not check existing doc: {e}")
                     
-                    logger.info(f"Crawl returned {len(pages) if isinstance(pages, list) else 0} pages")
+                    if skip_document:
+                        return
                     
-                    # Debug: log the structure of the first page
-                    if isinstance(pages, list) and len(pages) > 0:
-                        logger.info(f"First page type: {type(pages[0])}")
-                        if isinstance(pages[0], dict):
-                            logger.info(f"First page keys: {list(pages[0].keys())}")
-                            # Log if markdown exists
-                            logger.info(f"First page has 'markdown': {'markdown' in pages[0]}")
-                            logger.info(f"First page has 'content': {'content' in pages[0]}")
-                            # Log sample of first page data to understand structure
-                            logger.info(f"First page sample: {str(pages[0])[:500]}...")
-                        elif hasattr(pages[0], '__dict__'):
-                            logger.info(f"First page attributes: {dir(pages[0])}")
-                            logger.info(f"First page __dict__: {pages[0].__dict__}")
+                    # Extract metadata
+                    title = None
+                    if isinstance(page_data, dict):
+                        title = page_data.get('title')
+                        if not title and 'metadata' in page_data:
+                            title = page_data['metadata'].get('title')
+                    elif hasattr(page_data, 'title'):
+                        title = page_data.title
+                    elif hasattr(page_data, 'metadata') and isinstance(page_data.metadata, dict):
+                        title = page_data.metadata.get('title') or page_data.metadata.get('ogTitle')
                     
-                    # Process in batches of 10 to avoid memory issues
-                    batch_size = 10
-                    documents = []
-                    total_processed = 0
-                    total_with_content = 0
-                    total_treez_urls = 0
+                    # Create document
+                    doc = Document(
+                        content=content,
+                        meta_data={
+                            "title": title or 'Untitled',
+                            "source": page_url,
+                            "domain": "support.treez.io",
+                            "description": "",
+                            "updated_at": datetime.now().isoformat(),
+                            "content_hash": content_hash
+                        }
+                    )
+                    documents.append(doc)
+                    results["crawled_urls"].append(page_url)
                     
-                    for i, page_data in enumerate(pages if isinstance(pages, list) else []):
-                        # Debug log for each page
-                        # Try to extract URL early for logging
-                        debug_url = None
-                        if isinstance(page_data, dict):
-                            debug_url = page_data.get('url') or page_data.get('sourceURL')
-                            if not debug_url and 'metadata' in page_data:
-                                debug_url = page_data['metadata'].get('url') or page_data['metadata'].get('sourceURL')
-                        elif hasattr(page_data, 'url'):
-                            debug_url = page_data.url
-                        elif hasattr(page_data, 'sourceURL'):
-                            debug_url = page_data.sourceURL
+                    # Process batch when ready
+                    if len(documents) >= batch_size:
+                        await upload_batch()
+                
+                async def upload_batch():
+                    """Upload a batch of documents"""
+                    nonlocal documents, first_batch_uploaded, upload_verified
+                    
+                    if not documents:
+                        return
+                    
+                    logger.info(f"Uploading batch of {len(documents)} documents...")
+                    try:
+                        result = vector_db.upsert(documents=documents)
+                        if result is not None and hasattr(result, '__await__'):
+                            await result
                         
-                        logger.info(f"Processing page {i+1}... URL: {debug_url or 'NO URL FOUND'}")
+                        results["updated"] += len(documents)
+                        logger.info(f"✅ Successfully uploaded {len(documents)} documents")
+                        
+                        # Verify first batch
+                        if not first_batch_uploaded:
+                            first_batch_uploaded = True
+                            logger.info("=== FIRST BATCH VERIFICATION ===")
+                            if documents and not upload_verified:
+                                test_url = documents[0].meta_data.get("source", "")
+                                try:
+                                    search_results = vector_db.search(query=test_url, limit=1)
+                                    if search_results and len(search_results) > 0:
+                                        logger.info(f"✅ Upload verification PASSED")
+                                        upload_verified = True
+                                    else:
+                                        logger.error(f"❌ Upload verification FAILED")
+                                        raise Exception("Upload verification failed")
+                                except Exception as e:
+                                    logger.warning(f"Could not verify upload: {e}")
+                                    upload_verified = True
+                        
+                        documents = []  # Clear batch
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Error uploading batch: {e}")
+                        results["failed"] += len(documents)
+                        if not first_batch_uploaded:
+                            raise Exception(f"First batch upload failed: {e}")
+                        documents = []
+                
+                async def process_pages_batch(pages):
+                    """Process a batch of pages"""
+                    nonlocal total_processed, total_with_content, total_treez_urls, processed_urls
+                    
+                    for page_data in pages:
+                        # Skip if already processed
+                        page_url = None
+                        if isinstance(page_data, dict):
+                            page_url = page_data.get('url') or page_data.get('sourceURL')
+                            if not page_url and 'metadata' in page_data:
+                                page_url = page_data['metadata'].get('url') or page_data['metadata'].get('sourceURL')
+                        elif hasattr(page_data, 'url') and page_data.url:
+                            page_url = page_data.url
+                        elif hasattr(page_data, 'metadata') and isinstance(page_data.metadata, dict):
+                            page_url = page_data.metadata.get('url') or page_data.metadata.get('sourceURL')
+                        
+                        if not page_url:
+                            logger.warning("No URL found for page in batch processing")
+                            continue
+                            
+                        if page_url in processed_urls:
+                            logger.debug(f"Skipping already processed URL: {page_url}")
+                            continue
+                        
+                        logger.info(f"Processing URL: {page_url}")
+                        processed_urls.add(page_url)
                         total_processed += 1
                         
-                        # Check different possible content fields
+                        if total_processed % 2 == 0:
+                            logger.info(f"📊 Progress: Processed {total_processed} pages")
+                        
+                        # Only process Treez URLs
+                        if not page_url.startswith('https://support.treez.io'):
+                            logger.debug(f"Skipping non-Treez URL: {page_url}")
+                            continue
+                        
+                        total_treez_urls += 1
+                        
+                        # Extract content
                         content = None
                         if isinstance(page_data, dict):
                             content = page_data.get('markdown') or page_data.get('content') or page_data.get('text')
@@ -377,121 +436,140 @@ class SlackTreezBot:
                             content = page_data.content
                         
                         if not content:
-                            logger.warning(f"Page {i+1} has no content in 'markdown', 'content', or 'text' fields")
-                            if isinstance(page_data, dict):
-                                logger.warning(f"Available keys: {list(page_data.keys())}")
-                                # Log all keys and sample values to understand structure
-                                for key in list(page_data.keys())[:5]:  # First 5 keys
-                                    value = page_data[key]
-                                    if isinstance(value, str):
-                                        logger.warning(f"  {key}: {value[:100]}...")
-                                    elif isinstance(value, dict):
-                                        logger.warning(f"  {key}: dict with keys {list(value.keys())[:5]}")
-                                    else:
-                                        logger.warning(f"  {key}: {type(value)}")
+                            logger.debug(f"Page {page_url} has no content")
+                            continue
                         
-                        if content:
-                            total_with_content += 1
-                            
-                            # Log the structure when we DO have content
-                            if i == 0:  # Log details for first page with content
-                                logger.info(f"First page with content - type: {type(page_data)}")
-                                if isinstance(page_data, dict):
-                                    logger.info(f"Keys in page_data: {list(page_data.keys())}")
-                                    # Check for nested structures
-                                    for key in ['metadata', 'meta', 'info', 'data']:
-                                        if key in page_data and isinstance(page_data[key], dict):
-                                            logger.info(f"  {key} contains: {list(page_data[key].keys())[:10]}")
-                                elif hasattr(page_data, '__dict__'):
-                                    logger.info(f"Page attributes: {dir(page_data)}")
-                            
-                            # Extract URL from various possible fields
-                            page_url = None
-                            if isinstance(page_data, dict):
-                                page_url = page_data.get('url') or page_data.get('sourceURL')
-                                if not page_url and 'metadata' in page_data:
-                                    page_url = page_data['metadata'].get('url') or page_data['metadata'].get('sourceURL')
-                            elif hasattr(page_data, 'url'):
-                                page_url = page_data.url
-                            elif hasattr(page_data, 'sourceURL'):
-                                page_url = page_data.sourceURL
-                            
-                            if not page_url:
-                                logger.warning(f"Page {i+1} has no URL, skipping...")
-                                # Log all string values that might contain URLs
-                                if isinstance(page_data, dict):
-                                    for k, v in page_data.items():
-                                        if isinstance(v, str) and ('http' in v or 'treez' in v):
-                                            logger.warning(f"  Potential URL in '{k}': {v[:100]}")
-                                continue
-                            
-                            # Only process pages from support.treez.io
-                            if not page_url.startswith('https://support.treez.io'):
-                                logger.info(f"Skipping non-Treez URL: {page_url}")
-                                continue
-                            
-                            total_treez_urls += 1
-                            logger.info(f"Processing document {i+1}: {page_url}")
-                            
-                            # Calculate content hash for deduplication
-                            content_hash = hashlib.md5(content.encode()).hexdigest()
-                            
-                            # Extract title
-                            title = None
-                            if isinstance(page_data, dict):
-                                title = page_data.get('title')
-                                if not title and 'metadata' in page_data:
-                                    title = page_data['metadata'].get('title')
-                            elif hasattr(page_data, 'title'):
-                                title = page_data.title
-                            
-                            if not title:
-                                title = 'Untitled'
-                            
-                            # Create document
-                            doc = Document(
-                                content=content,
-                                meta_data={
-                                    "title": title,
-                                    "source": page_url,
-                                    "domain": "support.treez.io",
-                                    "description": page_data.get('description', page_data.get('metadata', {}).get('description', '')),
-                                    "updated_at": datetime.now().isoformat(),
-                                    "content_hash": content_hash
-                                }
-                            )
-                            documents.append(doc)
-                            results["crawled_urls"].append(page_url)
+                        total_with_content += 1
                         
-                        # Process batch when it reaches the batch size or at the end
-                        if len(documents) >= batch_size or (i == len(pages) - 1 and documents):
-                            logger.info(f"Upserting batch of {len(documents)} documents")
-                            try:
-                                # Check if upsert is async or sync
-                                result = vector_db.upsert(documents=documents)
-                                if result is not None and hasattr(result, '__await__'):
-                                    await result
-                                results["updated"] += len(documents)
-                                logger.info(f"Successfully upserted {len(documents)} documents")
-                            except Exception as e:
-                                logger.error(f"Error upserting documents: {str(e)}")
-                                results["failed"] += len(documents)
-                            finally:
-                                documents = []  # Reset for next batch
+                        # Process the document
+                        await process_document(page_data, page_url, content)
+                
+                try:
+                    logger.info("Starting async crawl with polling...")
                     
-                    # Log summary
-                    logger.info(f"\n=== CRAWL SUMMARY ===")
-                    logger.info(f"Total pages crawled: {total_processed}")
-                    logger.info(f"Pages with content: {total_with_content}")
-                    logger.info(f"Treez URLs found: {total_treez_urls}")
-                    logger.info(f"Documents added to knowledge base: {results['updated']}")
-                    logger.info(f"===================\n")
+                    # Start async crawl job
+                    crawl_job = firecrawl.async_crawl_url(
+                        base_url,
+                        limit=800,  # Full crawl limit
+                        scrape_options=ScrapeOptions(
+                            formats=['markdown'],
+                            maxAge=172800  # 48-hour cache
+                        )
+                    )
                     
-                    results["urls"].append(base_url)
-                else:
-                    logger.error(f"No data returned from crawl of {base_url}")
-                    results["failed"] += 1
+                    if not crawl_job.success:
+                        raise Exception(f"Failed to start crawl: {crawl_job.error}")
                     
+                    crawl_id = crawl_job.id
+                    logger.info(f"✅ Crawl job started. ID: {crawl_id}")
+                    
+                    # Poll for results
+                    poll_count = 0
+                    last_completed = 0
+                    
+                    while True:
+                        # Check crawl status
+                        status = firecrawl.check_crawl_status(crawl_id)
+                        
+                        if not status.success:
+                            raise Exception(f"Failed to check status: {status.error}")
+                        
+                        # Debug status structure on first poll
+                        if poll_count == 0:
+                            logger.info(f"Status type: {type(status)}")
+                            logger.info(f"Status attributes: {[attr for attr in dir(status) if not attr.startswith('_')]}")
+                            if hasattr(status, 'data'):
+                                logger.info(f"Status.data type: {type(status.data)}, has data: {status.data is not None}")
+                        
+                        # Log progress
+                        if status.completed != last_completed:
+                            logger.info(f"📈 Crawl progress: {status.completed}/{status.total} pages (Status: {status.status})")
+                            last_completed = status.completed
+                        
+                        # Process new documents
+                        if status.data:
+                            logger.info(f"📋 Status has {len(status.data)} documents to process")
+                            # Get only new pages (not already processed)
+                            new_pages = []
+                            for i, page in enumerate(status.data):
+                                # Debug first page structure
+                                if i == 0:
+                                    logger.info(f"First page type: {type(page)}")
+                                    if hasattr(page, '__dict__'):
+                                        logger.info(f"Page attributes: {[attr for attr in dir(page) if not attr.startswith('_')][:10]}")
+                                
+                                # Get URL to check if processed
+                                url = None
+                                if isinstance(page, dict):
+                                    url = page.get('url') or page.get('sourceURL') 
+                                    if not url and 'metadata' in page:
+                                        url = page['metadata'].get('url') or page['metadata'].get('sourceURL')
+                                elif hasattr(page, 'url') and page.url:
+                                    url = page.url
+                                elif hasattr(page, 'sourceURL') and page.sourceURL:
+                                    url = page.sourceURL
+                                elif hasattr(page, 'metadata'):
+                                    if isinstance(page.metadata, dict):
+                                        url = page.metadata.get('url') or page.metadata.get('sourceURL')
+                                    elif hasattr(page.metadata, 'sourceURL'):
+                                        url = page.metadata.sourceURL
+                                
+                                if not url:
+                                    logger.warning(f"Page {i} has no URL!")
+                                    continue
+                                
+                                if url not in processed_urls:
+                                    new_pages.append(page)
+                                else:
+                                    logger.debug(f"URL already processed: {url}")
+                            
+                            if new_pages:
+                                logger.info(f"📄 Processing {len(new_pages)} new pages...")
+                                await process_pages_batch(new_pages)
+                                
+                                # Upload batch if ready
+                                if documents and len(documents) >= batch_size:
+                                    await upload_batch()
+                        
+                        # Check if complete
+                        if status.status in ['completed', 'failed', 'cancelled']:
+                            logger.info(f"🏁 Crawl finished with status: {status.status}")
+                            break
+                        
+                        # Wait before next poll
+                        await asyncio.sleep(2)
+                        poll_count += 1
+                        
+                        # Safety limit
+                        if poll_count > 300:  # 10 minutes max
+                            logger.warning("Crawl timeout - stopping poll")
+                            break
+                    
+                    # Process any remaining documents
+                    if documents:
+                        await upload_batch()
+                    
+                except Exception as e:
+                    logger.error(f"Error during async crawl: {str(e)}")
+                    logger.error(f"Full traceback:", exc_info=True)
+                    raise
+                
+                # Log final summary
+                logger.info(f"\n=== CRAWL SUMMARY ===")
+                logger.info(f"Total pages crawled: {total_processed}")
+                logger.info(f"Pages with content: {total_with_content}")
+                logger.info(f"Treez URLs found: {total_treez_urls}")
+                logger.info(f"Documents skipped (unchanged): {total_skipped}")
+                logger.info(f"Documents updated (content changed): {total_updated}")
+                logger.info(f"Documents added to knowledge base: {results['updated']}")
+                logger.info(f"Failed: {total_failed}")
+                logger.info(f"===================\n")
+                
+                # Add statistics to results
+                results["skipped"] = total_skipped
+                results["content_updated"] = total_updated
+                results["urls"].append(base_url)
+
             except Exception as e:
                 logger.error(f"Failed to crawl and update knowledge from {base_url}: {str(e)}")
                 results["failed"] += 1

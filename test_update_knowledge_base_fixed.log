@@ -1,0 +1,45 @@
+2025-06-15 22:19:27,692 - __main__ - INFO - Creating Slack Treez agent...
+2025-06-15 22:19:27,692 - agents.slack_treez_agent - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 22:19:29,678 - agents.slack_treez_agent - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 22:19:29,678 - __main__ - INFO - Starting knowledge base update...
+2025-06-15 22:19:29,678 - agents.slack_treez_agent - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 22:19:29,678 - agents.slack_treez_agent - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
+2025-06-15 22:19:29,927 - agents.slack_treez_agent - ERROR - Error during crawl_url: Payment Required: Failed to start crawl job. Insufficient credits to perform this request. For more credits, you can upgrade your plan at https://firecrawl.dev/pricing or try changing the request limit to a lower value. - No additional error details provided.
+2025-06-15 22:19:29,928 - agents.slack_treez_agent - ERROR - Error type: <class 'requests.exceptions.HTTPError'>
+2025-06-15 22:19:29,928 - agents.slack_treez_agent - ERROR - Full traceback:
+Traceback (most recent call last):
+  File "/home/john/repos/agent-api/agents/slack_treez_agent.py", line 273, in update_knowledge_base
+    crawl_response = firecrawl.crawl_url(
+                     ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/firecrawl/firecrawl.py", line 788, in crawl_url
+    self._handle_error(response, 'start crawl job')
+  File "/usr/local/lib/python3.11/dist-packages/firecrawl/firecrawl.py", line 2234, in _handle_error
+    raise requests.exceptions.HTTPError(message, response=response)
+requests.exceptions.HTTPError: Payment Required: Failed to start crawl job. Insufficient credits to perform this request. For more credits, you can upgrade your plan at https://firecrawl.dev/pricing or try changing the request limit to a lower value. - No additional error details provided.
+2025-06-15 22:19:29,930 - agents.slack_treez_agent - ERROR - Failed to crawl and update knowledge from https://support.treez.io/en/: Payment Required: Failed to start crawl job. Insufficient credits to perform this request. For more credits, you can upgrade your plan at https://firecrawl.dev/pricing or try changing the request limit to a lower value. - No additional error details provided.
+2025-06-15 22:19:29,930 - __main__ - INFO - Update completed!
+2025-06-15 22:19:29,930 - __main__ - INFO - Results: {'updated': 0, 'failed': 1, 'skipped': 0, 'urls': [], 'crawled_urls': []}
+2025-06-15 22:19:29,931 - __main__ - INFO - 
+Testing search in knowledge base...
+2025-06-15 22:19:30,335 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+INFO Found 2 documents                                                                                           
+2025-06-15 22:19:31,500 - __main__ - INFO - Found 2 search results
+2025-06-15 22:19:31,500 - __main__ - INFO - 
+Result 1:
+2025-06-15 22:19:31,500 - __main__ - INFO - Title: Treez Overview
+2025-06-15 22:19:31,500 - __main__ - INFO - Source: treez_overview
+2025-06-15 22:19:31,500 - __main__ - INFO - Content preview: 
+            Treez is a comprehensive cannabis retail management platform that includes:
+            
+            **Treez Retail (POS)**
+            - Point of Sale system designed specifically for ca...
+2025-06-15 22:19:31,500 - __main__ - INFO - 
+Result 2:
+2025-06-15 22:19:31,500 - __main__ - INFO - Title: Common Treez POS Operations
+2025-06-15 22:19:31,500 - __main__ - INFO - Source: treez_pos_guide
+2025-06-15 22:19:31,501 - __main__ - INFO - Content preview: 
+            **Creating a Sale**
+            1. From the POS screen, search or scan products
+            2. Add items to cart
+            3. Apply any discounts or promotions
+            4. Select cus...

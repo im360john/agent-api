@@ -1,0 +1,4 @@
+2025-06-15 22:52:14,693 - agents.slack_treez_agent - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-15 22:52:16,271 - agents.slack_treez_agent - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-15 22:52:16,272 - agents.slack_treez_agent - INFO - === UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===
+2025-06-15 22:52:16,272 - agents.slack_treez_agent - INFO - Crawling https://support.treez.io/en/ and all sub-pages (using 48-hour cache for unchanged content)...
