@@ -9,7 +9,8 @@ from agno.embedder.openai import OpenAIEmbedder
 from agno.tools.firecrawl import FirecrawlTools
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.storage.agent.postgres import PostgresAgentStorage
-from agno.memory.v2.db.postgres import PostgresMemoryDb
+from agno.memory.postgres import PostgresMemoryDb
+from agno.memory import Memory
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 import asyncio
@@ -88,9 +89,15 @@ def get_slack_treez_agent(
     )
     
     # Memory configuration for personalization
-    memory = PostgresMemoryDb(
+    memory_db = PostgresMemoryDb(
         table_name="slack_treez_agent_memory",
         db_url=db_url
+    )
+    memory = Memory(
+        db=memory_db,
+        user_id=user_id,
+        create_user_memories=True,
+        create_session_memories=True
     )
     
     # Current date context
