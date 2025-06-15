@@ -8,7 +8,9 @@ def get_db_url():
         # Render provides PostgreSQL URLs in the format: postgres://...
         # SQLAlchemy 2.0+ requires postgresql:// or postgresql+psycopg://
         if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql://", 1)
+            db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif db_url.startswith("postgresql://"):
+            db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
         return db_url
     
     # Fallback to constructing from components
