@@ -244,7 +244,7 @@ class SlackTreezBot:
             return results
         
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import FirecrawlApp, ScrapeOptions
             firecrawl = FirecrawlApp(api_key=firecrawl_api_key)
         except ImportError as e:
             logger.error(f"Required package not installed: {e}")
