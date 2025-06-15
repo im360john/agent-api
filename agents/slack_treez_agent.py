@@ -229,6 +229,7 @@ class SlackTreezBot:
         
         Note: Processes articles in small batches to avoid memory issues.
         """
+        logger.info("=== UPDATE_KNOWLEDGE_BASE v2 - WITH CACHING AND BATCH PROCESSING ===")
         if urls is None:
             # Start with the main support site
             urls = ["https://support.treez.io/en/"]

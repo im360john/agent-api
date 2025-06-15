@@ -176,12 +176,15 @@ async def update_knowledge_base(background_tasks: BackgroundTasks):
     
     This endpoint can be called periodically to refresh the agent's knowledge
     """
+    logger.info("=== KNOWLEDGE UPDATE ENDPOINT HIT - LATEST CODE WITH BACKGROUND TASKS ===")
     try:
         bot = get_slack_bot()
         
+        logger.info("Starting knowledge base update in background...")
         # Start the update in the background
         background_tasks.add_task(bot.update_knowledge_base)
         
+        logger.info("Returning immediate response while crawl continues in background")
         return JSONResponse(content={
             "status": "accepted",
             "message": "Knowledge base update started in background",
