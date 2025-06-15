@@ -269,14 +269,20 @@ class SlackTreezBot:
                 
                 # Use regular crawl with caching to avoid recrawling unchanged content
                 # maxAge: 172800 seconds = 48 hours
-                crawl_response = firecrawl.crawl_url(
-                    base_url, 
-                    limit=500,
-                    scrape_options={
-                        'formats': ['markdown'],
-                        'maxAge': 172800  # Use cache if less than 48 hours old
-                    }
-                )
+                # Try without scrape_options first to see if that's causing the issue
+                try:
+                    crawl_response = firecrawl.crawl_url(
+                        base_url, 
+                        limit=500
+                    )
+                except Exception as e:
+                    logger.error(f"Error during crawl_url: {str(e)}")
+                    logger.error(f"Error type: {type(e)}")
+                    raise
+                
+                logger.info(f"Crawl response type: {type(crawl_response)}")
+                if hasattr(crawl_response, '__dict__'):
+                    logger.info(f"Crawl response attributes: {dir(crawl_response)}")
                 
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
