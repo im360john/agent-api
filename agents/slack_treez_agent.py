@@ -264,10 +264,18 @@ class SlackTreezBot:
         
         for base_url in urls:
             try:
-                logger.info(f"Crawling {base_url} and all sub-pages...")
+                logger.info(f"Crawling {base_url} and all sub-pages (using 48-hour cache for unchanged content)...")
                 
-                # Use regular crawl
-                crawl_response = firecrawl.crawl_url(base_url, limit=500)
+                # Use regular crawl with caching to avoid recrawling unchanged content
+                # maxAge: 172800 seconds = 48 hours
+                crawl_response = firecrawl.crawl_url(
+                    base_url, 
+                    limit=500,
+                    scrape_options={
+                        'formats': ['markdown'],
+                        'maxAge': 172800  # Use cache if less than 48 hours old
+                    }
+                )
                 
                 if crawl_response:
                     # Check if we got data (could be in 'data' or direct list)
