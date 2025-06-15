@@ -313,7 +313,10 @@ class SlackTreezBot:
                     # Batch upsert documents
                     if documents:
                         logger.info(f"Upserting {len(documents)} documents from {base_url}")
-                        await vector_db.upsert(documents=documents)
+                        # Check if upsert is async or sync
+                        result = vector_db.upsert(documents=documents)
+                        if result is not None and hasattr(result, '__await__'):
+                            await result
                         results["updated"] += len(documents)
                         results["urls"].append(base_url)
                     
@@ -428,11 +431,17 @@ async def seed_knowledge_base(agent: Agent):
         logger.info("Ensuring vector database table exists...")
         try:
             # Try to use the vector_db's connection to create table
-            if hasattr(vector_db, 'db'):
-                from sqlalchemy import text
-                async with vector_db.db.begin() as conn:
+            if hasattr(vector_db, 'Session') or hasattr(vector_db, 'db_url'):
+                from sqlalchemy import text, create_engine
+                from sqlalchemy.orm import sessionmaker
+                
+                # Get database URL
+                db_url = getattr(vector_db, 'db_url', db_url)
+                engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
+                
+                with engine.begin() as conn:
                     # First ensure schema exists
-                    await conn.execute(text("CREATE SCHEMA IF NOT EXISTS ai"))
+                    conn.execute(text("CREATE SCHEMA IF NOT EXISTS ai"))
                     
                     # Create the table with proper structure
                     create_table_sql = """
@@ -450,7 +459,7 @@ async def seed_knowledge_base(agent: Agent):
                     CREATE INDEX IF NOT EXISTS idx_treez_support_articles_embedding 
                     ON ai.treez_support_articles USING ivfflat (embedding vector_cosine_ops);
                     """
-                    await conn.execute(text(create_table_sql))
+                    conn.execute(text(create_table_sql))
                     logger.info("Table created successfully")
             else:
                 # Fallback - try to trigger table creation
@@ -475,7 +484,11 @@ async def seed_knowledge_base(agent: Agent):
         
         # Upsert documents into the vector database
         logger.info(f"Inserting {len(documents)} documents into vector database")
-        await vector_db.upsert(documents=documents)
+        
+        # Check if upsert is async or sync
+        result = vector_db.upsert(documents=documents)
+        if result is not None and hasattr(result, '__await__'):
+            await result
         
         logger.info("Knowledge base seeded successfully with initial content")
         return True
