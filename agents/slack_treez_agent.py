@@ -96,8 +96,7 @@ def get_slack_treez_agent(
         model=OpenAIChat(id=model_id),
         db=memory_db,
         delete_memories=True,
-        create_user_memories=True,
-        create_session_memories=True
+        clear_memories=True
     )
     
     # Current date context
@@ -143,6 +142,7 @@ def get_slack_treez_agent(
         ],
         storage=storage,
         memory=memory,
+        enable_agentic_memory=True,
         user_id=user_id,
         session_id=session_id,
         markdown=True,
