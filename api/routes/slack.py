@@ -3,9 +3,10 @@ from fastapi.responses import JSONResponse
 import os
 import json
 import logging
-from typing import Optional
+from typing import Optional, Set
 from agents.slack_treez_agent import get_slack_treez_agent, SlackTreezBot, seed_knowledge_base
 import asyncio
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,10 @@ router = APIRouter()
 
 # Initialize the bot once at module level
 _bot_instance: Optional[SlackTreezBot] = None
+
+# Track processed events to prevent duplicates
+_processed_events: Set[str] = set()
+_event_timestamps: dict = {}  # Track event timestamps for cleanup
 
 def get_slack_bot() -> SlackTreezBot:
     """Get or create the Slack bot instance"""
@@ -56,6 +61,25 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
                 logger.debug("Ignoring bot message to prevent loop")
                 return JSONResponse(content={"status": "ok"})
             
+            # Deduplicate events using event_id or create a unique key
+            event_id = body.get("event_id") or f"{event.get('ts')}_{event.get('user')}_{event.get('text', '')[:50]}"
+            
+            # Clean up old events (older than 5 minutes)
+            current_time = time.time()
+            for old_event_id, timestamp in list(_event_timestamps.items()):
+                if current_time - timestamp > 300:  # 5 minutes
+                    _processed_events.discard(old_event_id)
+                    del _event_timestamps[old_event_id]
+            
+            # Check if we've already processed this event
+            if event_id in _processed_events:
+                logger.info(f"Skipping duplicate event: {event_id}")
+                return JSONResponse(content={"status": "ok"})
+            
+            # Mark event as processed
+            _processed_events.add(event_id)
+            _event_timestamps[event_id] = current_time
+            
             # Process app mentions in the background
             if event_type == "app_mention":
                 background_tasks.add_task(process_app_mention, event)
@@ -82,6 +106,9 @@ async def process_app_mention(event: dict):
             logger.debug("Skipping bot message in process_app_mention")
             return
             
+        logger.info(f"Processing app mention from user {event.get('user')} in channel {event.get('channel')}")
+        logger.debug(f"Event details: text='{event.get('text')}', ts={event.get('ts')}")
+        
         bot = get_slack_bot()
         channel = event.get("channel")
         thread_ts = event.get("ts")
@@ -90,6 +117,7 @@ async def process_app_mention(event: dict):
         response = await bot.process_mention(event)
         
         if response and channel:
+            logger.info(f"Sending response to channel {channel}, thread_ts={thread_ts}")
             # Send response in thread
             await bot.send_response(channel, response, thread_ts)
     
