@@ -99,14 +99,13 @@ def get_slack_treez_agent(
     memory = Memory(
         model=OpenAIChat(id=model_id),
         db=memory_db,
-        delete_memories=True,
-        clear_memories=True
+        delete_memories=False,  # Keep memories for persistence
+        clear_memories=False    # Don't clear on initialization
     )
     
     # Initialize the agent
-    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
     agent = Agent(
-        agent_id=f"slack_treez_agent_{run_id}",
+        agent_id="slack_treez_agent",  # Consistent ID for memory persistence
         name="Treez Support Expert",
         model=OpenAIChat(id=model_id),
         knowledge=knowledge_base,
