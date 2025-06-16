@@ -51,6 +51,11 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
             event = body["event"]
             event_type = event.get("type")
             
+            # IMPORTANT: Ignore bot's own messages to prevent loops
+            if event.get("bot_id") or event.get("subtype") == "bot_message":
+                logger.debug("Ignoring bot message to prevent loop")
+                return JSONResponse(content={"status": "ok"})
+            
             # Process app mentions in the background
             if event_type == "app_mention":
                 background_tasks.add_task(process_app_mention, event)
@@ -72,6 +77,11 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
 async def process_app_mention(event: dict):
     """Process app mention events"""
     try:
+        # Double-check: ignore bot messages
+        if event.get("bot_id") or event.get("subtype") == "bot_message":
+            logger.debug("Skipping bot message in process_app_mention")
+            return
+            
         bot = get_slack_bot()
         channel = event.get("channel")
         thread_ts = event.get("ts")
@@ -101,6 +111,11 @@ async def process_app_mention(event: dict):
 
 async def process_message(event: dict):
     """Process direct messages"""
+    # Double-check: ignore bot messages
+    if event.get("bot_id") or event.get("subtype") == "bot_message":
+        logger.debug("Skipping bot message in process_message")
+        return
+        
     # Similar to app mention but for DMs
     await process_app_mention(event)
 
