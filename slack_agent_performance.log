@@ -1,0 +1,75 @@
+2025-06-16 15:52:25,781 - performance - INFO - ================================================================================
+2025-06-16 15:52:25,781 - performance - INFO - SLACK AGENT PERFORMANCE TEST
+2025-06-16 15:52:25,781 - performance - INFO - ================================================================================
+2025-06-16 15:52:25,781 - performance - INFO - Test started at: 2025-06-16 15:52:25.781475
+2025-06-16 15:52:25,781 - performance - INFO - OpenAI API Key: Set
+2025-06-16 15:52:25,781 - performance - INFO - Database URL: Set
+2025-06-16 15:52:25,781 - performance - INFO - Slack Bot Token: Not Set
+2025-06-16 15:52:25,782 - performance - INFO - Firecrawl API Key: Not Set
+2025-06-16 15:52:25,782 - performance - INFO - ================================================================================
+2025-06-16 15:52:25,782 - performance - INFO - [START] Agent Creation
+2025-06-16 15:52:25,782 - agents.slack_treez_agent - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-16 15:52:25,782 - agents.slack_treez_agent - WARNING - FIRECRAWL_API_KEY not found - Knowledge base updates may be limited
+2025-06-16 15:52:27,390 - agent - INFO - Agent created with model: gpt-4.1-mini
+2025-06-16 15:52:27,391 - agent - INFO - Knowledge base enabled: True
+2025-06-16 15:52:27,391 - agent - INFO - History runs: 3
+2025-06-16 15:52:27,391 - agent - INFO - Agentic memory: True
+2025-06-16 15:52:27,391 - performance - INFO - [END] Agent Creation - Duration: 1.61s
+2025-06-16 15:52:27,391 - performance - INFO - [START] Bot Wrapper Creation
+2025-06-16 15:52:27,391 - agents.slack_treez_agent - WARNING - No Slack token provided - bot will not be able to send messages
+2025-06-16 15:52:27,391 - agent - INFO - SlackTreezBot wrapper created
+2025-06-16 15:52:27,391 - performance - INFO - [END] Bot Wrapper Creation - Duration: 0.00s
+2025-06-16 15:52:27,392 - performance - INFO - 
+[TEST CASE] promo_carousel - Complex technical support query
+2025-06-16 15:52:27,392 - performance - INFO - [START] Total Response Time - promo_carousel
+2025-06-16 15:52:30,550 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-16 15:52:31,192 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-16 15:52:39,015 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-16 15:52:39,853 - httpx - INFO - HTTP Request: POST https://api.agno.com/v1/telemetry/agent/run/create "HTTP/1.1 200 OK"
+2025-06-16 15:52:39,854 - agent - INFO - Response length: 973 characters
+2025-06-16 15:52:39,854 - agent - INFO - Response preview: If Dr A's promo carousel is not displaying discount names despite correct configuration in Prismic, here are key things to verify:
+
+• In the Prismic Promo Carousel module editor, ensure each promo car...
+2025-06-16 15:52:39,854 - performance - INFO - [END] Total Response Time - promo_carousel - Duration: 12.46s
+2025-06-16 15:52:41,855 - performance - INFO - 
+[TEST CASE] simple_query - Simple how-to query
+2025-06-16 15:52:41,855 - performance - INFO - [START] Total Response Time - simple_query
+2025-06-16 15:52:43,056 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-16 15:52:43,464 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-16 15:52:48,552 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-16 15:52:49,230 - httpx - INFO - HTTP Request: POST https://api.agno.com/v1/telemetry/agent/run/create "HTTP/1.1 200 OK"
+2025-06-16 15:52:49,231 - agent - INFO - Response length: 548 characters
+2025-06-16 15:52:49,231 - agent - INFO - Response preview: To add a new product to Treez POS:
+
+• Navigate to _Product > Product Management_ in the Treez POS interface.
+• Click the orange **+** icon on the Product Management page.
+• Fill out the relevant infor...
+2025-06-16 15:52:49,232 - performance - INFO - [END] Total Response Time - simple_query - Duration: 7.38s
+2025-06-16 15:52:51,234 - performance - INFO - 
+[TEST CASE] no_kb_query - Query that should not use knowledge base
+2025-06-16 15:52:51,234 - performance - INFO - [START] Total Response Time - no_kb_query
+2025-06-16 15:52:53,131 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-06-16 15:52:53,767 - httpx - INFO - HTTP Request: POST https://api.agno.com/v1/telemetry/agent/run/create "HTTP/1.1 200 OK"
+2025-06-16 15:52:53,768 - agent - INFO - Response length: 298 characters
+2025-06-16 15:52:53,769 - agent - INFO - Response preview: I don't have direct access to live weather data. For the most accurate and current weather information, you might want to check a reliable weather website or app like Weather.com or use a voice assist...
+2025-06-16 15:52:53,769 - performance - INFO - [END] Total Response Time - no_kb_query - Duration: 2.53s
+2025-06-16 15:52:55,770 - performance - INFO - 
+================================================================================
+2025-06-16 15:52:55,771 - performance - INFO - KNOWLEDGE BASE SEARCH TEST
+2025-06-16 15:52:55,771 - performance - INFO - ================================================================================
+2025-06-16 15:52:55,771 - performance - INFO - [START] Agent Creation for KB Test
+2025-06-16 15:52:55,771 - agents.slack_treez_agent - WARNING - SLACK_BOT_TOKEN not found - Slack integration will not work
+2025-06-16 15:52:55,771 - agents.slack_treez_agent - WARNING - FIRECRAWL_API_KEY not found - Knowledge base updates may be limited
+2025-06-16 15:52:57,146 - performance - INFO - [END] Agent Creation for KB Test - Duration: 1.37s
+2025-06-16 15:52:57,146 - performance - INFO - [START] Knowledge Base Search - 'promo carousel discount'
+2025-06-16 15:52:57,575 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-16 15:52:59,104 - knowledge_base - INFO - Found 3 documents for 'promo carousel discount'
+2025-06-16 15:52:59,105 - performance - INFO - [END] Knowledge Base Search - 'promo carousel discount' - Duration: 1.96s
+2025-06-16 15:52:59,105 - performance - INFO - [START] Knowledge Base Search - 'treez pos add product'
+2025-06-16 15:52:59,258 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-16 15:53:00,071 - knowledge_base - INFO - Found 3 documents for 'treez pos add product'
+2025-06-16 15:53:00,071 - performance - INFO - [END] Knowledge Base Search - 'treez pos add product' - Duration: 0.97s
+2025-06-16 15:53:00,072 - performance - INFO - [START] Knowledge Base Search - 'payment processing'
+2025-06-16 15:53:00,341 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-06-16 15:53:01,158 - knowledge_base - INFO - Found 3 documents for 'payment processing'
+2025-06-16 15:53:01,158 - performance - INFO - [END] Knowledge Base Search - 'payment processing' - Duration: 1.09s

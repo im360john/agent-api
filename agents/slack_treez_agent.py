@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 def get_slack_treez_agent(
-    model_id: str = "gpt-4o",
+    model_id: str = "gpt-4.1-mini",
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     debug_mode: bool = True,
@@ -81,7 +81,8 @@ def get_slack_treez_agent(
             embedder=OpenAIEmbedder(
                 id="text-embedding-3-small"
             )
-        )
+        ),
+        num_documents=3  # Limit to top 3 most relevant documents
     )
     
     # Storage configuration
@@ -110,58 +111,29 @@ def get_slack_treez_agent(
         model=OpenAIChat(id=model_id),
         knowledge=knowledge_base,
         search_knowledge=True,  # Enable agentic RAG
+        read_chat_history=True,  # Enable chat history reading
         tools=tools,
         instructions=dedent("""\
-            You are an expert Treez support agent responding via Slack.
+            Expert Treez support agent. Search knowledge base first, then provide concise Slack-formatted answers.
             
-            You have comprehensive knowledge of all Treez products including:
-            - Treez POS (Point of Sale) system
-            - Treez eCommerce platform
-            - Treez Payments solutions
-            - Treez Compliance tools
-            - Treez API and integrations
-            - Treez reporting and analytics
+            Products: POS, eCommerce, Payments, Compliance, API, Analytics
             
-            When responding:
-            1. ALWAYS search your knowledge base first for Treez-specific information
-            2. Provide accurate answers based on official Treez documentation
-            3. Include relevant article titles or links when available
-            4. Format responses for Slack readability (use bullet points, numbered lists)
-            5. For multi-step processes, provide clear step-by-step instructions
-            6. If information isn't in your knowledge base, use web search for latest updates
-            7. Be concise but comprehensive - Slack messages should be easy to read
-            8. Use Slack markdown formatting when helpful (bold, italics, code blocks)
+            Format: *bold*, `code`, bullet points (•), short paragraphs
             
-            Response format for Slack:
-            - Use *bold* for emphasis
-            - Use `code` for technical terms or commands
-            - Use ```code blocks``` for multi-line code or configurations
-            - Use • for bullet points
-            - Keep paragraphs short for mobile readability
-            
-            If asked about topics not in Treez documentation, politely redirect to Treez support or indicate it's outside your knowledge area.
-            
-            Additional Information:
-            - You are interacting with user_id: {current_user_id}
-            - The current session_id is: {current_session_id}
+            User: {current_user_id} | Session: {current_session_id}
         """),
         storage=storage,
         memory=memory,
-        enable_agentic_memory=True,
+        enable_agentic_memory=True,  # Enable agentic memory
         user_id=user_id,
         session_id=session_id,
         markdown=True,
         debug_mode=debug_mode,
-        monitoring=True,
-        description=dedent("""\
-            You are a Treez Support Expert, providing accurate and helpful guidance on all Treez products and features.
-            
-            Your responses are tailored for Slack communication - clear, concise, and well-formatted.
-        """),
-        add_history_to_messages=True,
-        num_history_runs=5,  # Keep last 5 messages for context
-        read_chat_history=True,  # Add tool to read chat history
-        add_datetime_to_instructions=True,  # Add current date/time automatically
+        monitoring=False,  # Disable monitoring for speed
+        description="Treez support expert for Slack",
+        add_history_to_messages=False,  # Disable for speed
+        num_history_runs=3,  # Keep last 3 messages for context
+        add_datetime_to_instructions=False,  # Disable for speed
         add_state_in_messages=True,  # Make user_id available in instructions
         show_tool_calls=False,  # Clean output for Slack
     )
