@@ -69,6 +69,11 @@ class CompetitorPricingTools(Toolkit):
         # Register tools
         self.register(self.track_product)
         self.register(self.add_competitor)
+        self.register(self.delete_competitor)
+        self.register(self.modify_competitor_urls)
+        self.register(self.delete_product)
+        self.register(self.list_competitors)
+        self.register(self.list_products)
         self.register(self.check_prices)
         self.register(self.bulk_price_check)
         self.register(self.get_price_history)
@@ -157,7 +162,189 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"❌ Error adding competitor: {str(e)}"
     
-    async def check_prices(self, product_name: str, brand: str = None, 
+    async def delete_competitor(self, name: str) -> str:
+        """
+        Delete a competitor from tracking.
+        
+        Args:
+            name: Competitor name to delete
+            
+        Returns:
+            Success or error message
+        """
+        try:
+            with self.Session() as session:
+                # Check if competitor exists
+                result = session.execute(text("""
+                    SELECT id FROM pricing.competitors WHERE name = :name
+                """), {"name": name})
+                
+                competitor = result.fetchone()
+                if not competitor:
+                    return f"❌ Competitor '{name}' not found"
+                
+                competitor_id = competitor[0]
+                
+                # Delete price history first (due to foreign key constraint)
+                session.execute(text("""
+                    DELETE FROM pricing.price_history WHERE competitor_id = :competitor_id
+                """), {"competitor_id": competitor_id})
+                
+                # Delete competitor
+                session.execute(text("""
+                    DELETE FROM pricing.competitors WHERE id = :competitor_id
+                """), {"competitor_id": competitor_id})
+                
+                session.commit()
+                return f"✅ Deleted competitor '{name}' and all associated price history"
+                
+        except Exception as e:
+            return f"❌ Error deleting competitor: {str(e)}"
+    
+    async def modify_competitor_urls(self, name: str, urls: List[str]) -> str:
+        """
+        Update competitor URLs.
+        
+        Args:
+            name: Competitor name
+            urls: New list of URLs
+            
+        Returns:
+            Success or error message
+        """
+        try:
+            with self.Session() as session:
+                # Check if competitor exists
+                result = session.execute(text("""
+                    SELECT id FROM pricing.competitors WHERE name = :name
+                """), {"name": name})
+                
+                competitor = result.fetchone()
+                if not competitor:
+                    return f"❌ Competitor '{name}' not found"
+                
+                # Update URLs
+                session.execute(text("""
+                    UPDATE pricing.competitors 
+                    SET urls = :urls, updated_at = CURRENT_TIMESTAMP
+                    WHERE name = :name
+                """), {
+                    "name": name,
+                    "urls": urls
+                })
+                
+                session.commit()
+                return f"✅ Updated URLs for '{name}' to: {', '.join(urls)}"
+                
+        except Exception as e:
+            return f"❌ Error updating competitor URLs: {str(e)}"
+    
+    async def delete_product(self, name: str, brand: str) -> str:
+        """
+        Delete a product from tracking.
+        
+        Args:
+            name: Product name
+            brand: Product brand
+            
+        Returns:
+            Success or error message
+        """
+        try:
+            with self.Session() as session:
+                # Check if product exists
+                result = session.execute(text("""
+                    SELECT id FROM pricing.products 
+                    WHERE name = :name AND brand = :brand
+                """), {"name": name, "brand": brand})
+                
+                product = result.fetchone()
+                if not product:
+                    return f"❌ Product '{brand} {name}' not found"
+                
+                product_id = product[0]
+                
+                # Delete price history first (due to foreign key constraint)
+                session.execute(text("""
+                    DELETE FROM pricing.price_history WHERE product_id = :product_id
+                """), {"product_id": product_id})
+                
+                # Delete product
+                session.execute(text("""
+                    DELETE FROM pricing.products WHERE id = :product_id
+                """), {"product_id": product_id})
+                
+                session.commit()
+                return f"✅ Deleted product '{brand} {name}' and all associated price history"
+                
+        except Exception as e:
+            return f"❌ Error deleting product: {str(e)}"
+    
+    async def list_competitors(self) -> str:
+        """
+        List all tracked competitors.
+        
+        Returns:
+            Formatted list of competitors
+        """
+        try:
+            with self.Session() as session:
+                result = session.execute(text("""
+                    SELECT name, urls, enabled, created_at
+                    FROM pricing.competitors
+                    ORDER BY name
+                """))
+                
+                competitors = result.fetchall()
+                
+                if not competitors:
+                    return "📋 No competitors tracked yet"
+                
+                output = "📋 **Tracked Competitors:**\n\n"
+                for name, urls, enabled, created_at in competitors:
+                    status = "✅ Active" if enabled else "❌ Disabled"
+                    output += f"• **{name}** - {status}\n"
+                    output += f"  URLs: {', '.join(urls)}\n"
+                    output += f"  Added: {created_at.strftime('%Y-%m-%d')}\n\n"
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error listing competitors: {str(e)}"
+    
+    async def list_products(self) -> str:
+        """
+        List all tracked products.
+        
+        Returns:
+            Formatted list of products
+        """
+        try:
+            with self.Session() as session:
+                result = session.execute(text("""
+                    SELECT name, brand, category, enabled, created_at
+                    FROM pricing.products
+                    ORDER BY brand, name
+                """))
+                
+                products = result.fetchall()
+                
+                if not products:
+                    return "📦 No products tracked yet"
+                
+                output = "📦 **Tracked Products:**\n\n"
+                for name, brand, category, enabled, created_at in products:
+                    status = "✅ Active" if enabled else "❌ Disabled"
+                    cat_text = f" ({category})" if category else ""
+                    output += f"• **{brand} {name}**{cat_text} - {status}\n"
+                    output += f"  Added: {created_at.strftime('%Y-%m-%d')}\n\n"
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error listing products: {str(e)}"
+    
+    async def check_prices(self, product_name: str, brand: Optional[str] = None, 
                           competitor_names: List[str] = None, force_refresh: bool = False) -> str:
         """
         Check current prices for a product across competitors.
@@ -851,11 +1038,16 @@ def get_competitive_pricing_agent(
             
             1. **Product Tracking**
                - Add products with `track_product` including brand, name, category
+               - Remove products with `delete_product` (requires brand and name)
+               - List all products with `list_products`
                - Support variants (size, flavor, potency)
                - Handle cannabis products with THC/CBD content
             
             2. **Competitor Management**
                - Add competitors with `add_competitor` 
+               - Update competitor URLs with `modify_competitor_urls`
+               - Remove competitors with `delete_competitor`
+               - List all competitors with `list_competitors`
                - Support multiple URLs per competitor
                - Track both carried and not-carried products
             

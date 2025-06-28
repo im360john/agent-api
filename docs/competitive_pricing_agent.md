@@ -13,6 +13,7 @@ The Competitive Pricing Agent is an AI-powered tool for tracking and analyzing p
 - **Availability Tracking**: Monitor in-stock, out-of-stock, and not-carried statuses
 - **Smart Caching**: 24-hour cache to reduce API calls with force refresh option
 - **Member Pricing**: Track both regular and member price tiers
+- **Management Functions**: Delete products/competitors, modify URLs, list all tracked items
 
 ### Technical Features
 - **Two-Tier Scraping**: Firecrawl (fast) with Browserbase fallback (JavaScript sites)
@@ -80,6 +81,20 @@ agent.run("Show me price history for Wyld Strawberry Gummies over the last 30 da
 
 # Analyze trends
 agent.run("Analyze pricing trends for edibles category this week")
+```
+
+### 5. Management Functions
+```python
+# List all tracked items
+agent.run("List all competitors")
+agent.run("List all products")
+
+# Modify competitor URLs
+agent.run("Update Harborside URLs to https://shopharborside.com/san-jose/ and https://shopharborside.com/oakland/")
+
+# Delete items
+agent.run("Delete competitor Theraleaf")
+agent.run("Delete product Wyld Huckleberry Gummies")
 ```
 
 ## API Keys Required
