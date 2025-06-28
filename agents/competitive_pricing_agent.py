@@ -327,11 +327,22 @@ class CompetitorPricingTools(Toolkit):
         """
         try:
             with self.Session() as session:
-                result = session.execute(text("""
-                    SELECT name, brand, category, enabled, created_at
-                    FROM pricing.products
-                    ORDER BY brand, name
-                """))
+                # Check if enabled column exists
+                try:
+                    result = session.execute(text("""
+                        SELECT name, brand, category, enabled, created_at
+                        FROM pricing.products
+                        ORDER BY brand, name
+                    """))
+                    has_enabled = True
+                except:
+                    # Fallback for databases without enabled column
+                    result = session.execute(text("""
+                        SELECT name, brand, category, true as enabled, created_at
+                        FROM pricing.products
+                        ORDER BY brand, name
+                    """))
+                    has_enabled = False
                 
                 products = result.fetchall()
                 
@@ -342,8 +353,10 @@ class CompetitorPricingTools(Toolkit):
                 for name, brand, category, enabled, created_at in products:
                     status = "✅ Active" if enabled else "❌ Disabled"
                     cat_text = f" ({category})" if category else ""
-                    output += f"• **{brand} {name}**{cat_text} - {status}\n"
-                    output += f"  Added: {created_at.strftime('%Y-%m-%d')}\n\n"
+                    output += f"• **{brand} {name}**{cat_text}"
+                    if has_enabled:
+                        output += f" - {status}"
+                    output += f"\n  Added: {created_at.strftime('%Y-%m-%d')}\n\n"
                 
                 return output
                 
@@ -366,40 +379,83 @@ class CompetitorPricingTools(Toolkit):
         """
         try:
             with self.Session() as session:
-                # Build query for latest prices
-                query = text("""
-                    SELECT 
-                        lp.product_name,
-                        lp.brand,
-                        lp.competitor_name,
-                        lp.price,
-                        lp.scraped_at,
-                        lp.hours_old,
-                        lp.freshness_status,
-                        lp.availability_status
-                    FROM pricing.latest_prices lp
-                    WHERE 1=1
-                """)
-                
-                params = {}
-                
-                # Add filters if provided
-                if product_name and brand:
-                    query = text(str(query) + " AND lp.product_name = :product_name AND lp.brand = :brand")
-                    params["product_name"] = product_name
-                    params["brand"] = brand
-                elif product_name:
-                    query = text(str(query) + " AND lp.product_name ILIKE :product_pattern")
-                    params["product_pattern"] = f"%{product_name}%"
-                
-                if competitor_names:
-                    query = text(str(query) + " AND lp.competitor_name = ANY(:competitors)")
-                    params["competitors"] = competitor_names
-                
-                query = text(str(query) + " ORDER BY lp.hours_old DESC")
-                
-                result = session.execute(query, params)
-                data = result.fetchall()
+                # Try to use materialized view first, fall back to direct query if not available
+                try:
+                    # Build query for latest prices
+                    query = text("""
+                        SELECT 
+                            lp.product_name,
+                            lp.brand,
+                            lp.competitor_name,
+                            lp.price,
+                            lp.scraped_at,
+                            lp.hours_old,
+                            lp.freshness_status,
+                            lp.availability_status
+                        FROM pricing.latest_prices lp
+                        WHERE 1=1
+                    """)
+                    
+                    params = {}
+                    
+                    # Add filters if provided
+                    if product_name and brand:
+                        query = text(str(query) + " AND lp.product_name = :product_name AND lp.brand = :brand")
+                        params["product_name"] = product_name
+                        params["brand"] = brand
+                    elif product_name:
+                        query = text(str(query) + " AND lp.product_name ILIKE :product_pattern")
+                        params["product_pattern"] = f"%{product_name}%"
+                    
+                    if competitor_names:
+                        query = text(str(query) + " AND lp.competitor_name = ANY(:competitors)")
+                        params["competitors"] = competitor_names
+                    
+                    query = text(str(query) + " ORDER BY lp.hours_old DESC")
+                    
+                    result = session.execute(query, params)
+                    data = result.fetchall()
+                except:
+                    # Fallback to direct query if materialized view doesn't exist
+                    query = text("""
+                        SELECT DISTINCT ON (p.id, c.id)
+                            p.name as product_name,
+                            p.brand,
+                            c.name as competitor_name,
+                            ph.price,
+                            ph.scraped_at,
+                            EXTRACT(EPOCH FROM (NOW() - ph.scraped_at))/3600 as hours_old,
+                            CASE 
+                                WHEN EXTRACT(EPOCH FROM (NOW() - ph.scraped_at))/3600 < 12 THEN 'fresh'
+                                WHEN EXTRACT(EPOCH FROM (NOW() - ph.scraped_at))/3600 < 24 THEN 'stale'
+                                ELSE 'old'
+                            END as freshness_status,
+                            ph.availability_status
+                        FROM pricing.price_history ph
+                        JOIN pricing.products p ON ph.product_id = p.id
+                        JOIN pricing.competitors c ON ph.competitor_id = c.id
+                        WHERE 1=1
+                    """)
+                    
+                    params = {}
+                    
+                    # Add filters if provided
+                    if product_name and brand:
+                        query = text(str(query) + " AND p.name = :product_name AND p.brand = :brand")
+                        params["product_name"] = product_name
+                        params["brand"] = brand
+                    elif product_name:
+                        query = text(str(query) + " AND p.name ILIKE :product_pattern")
+                        params["product_pattern"] = f"%{product_name}%"
+                    
+                    if competitor_names:
+                        query = text(str(query) + " AND c.name = ANY(:competitors)")
+                        params["competitors"] = competitor_names
+                    
+                    query = text(str(query) + " ORDER BY p.id, c.id, ph.scraped_at DESC")
+                    
+                    result = session.execute(query, params)
+                    data = result.fetchall()
                 
                 if not data:
                     return "📊 No price data found for the specified criteria"
@@ -1276,11 +1332,20 @@ class CompetitorPricingTools(Toolkit):
                         product_ids.append(product_row[0])
                     else:
                         # Track product if it doesn't exist
-                        result = session.execute(text("""
-                            INSERT INTO pricing.products (name, brand, enabled)
-                            VALUES (:name, :brand, true)
-                            RETURNING id
-                        """), {"name": prod['name'], "brand": prod['brand']})
+                        # Check if enabled column exists
+                        try:
+                            result = session.execute(text("""
+                                INSERT INTO pricing.products (name, brand, enabled)
+                                VALUES (:name, :brand, true)
+                                RETURNING id
+                            """), {"name": prod['name'], "brand": prod['brand']})
+                        except:
+                            # Fallback for databases without enabled column
+                            result = session.execute(text("""
+                                INSERT INTO pricing.products (name, brand)
+                                VALUES (:name, :brand)
+                                RETURNING id
+                            """), {"name": prod['name'], "brand": prod['brand']})
                         product_ids.append(result.fetchone()[0])
                 
                 # Get competitor IDs
