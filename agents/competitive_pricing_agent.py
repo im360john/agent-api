@@ -2,7 +2,7 @@
 
 from textwrap import dedent
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import json
 import re
@@ -46,7 +46,7 @@ class PriceData:
     
     def __post_init__(self):
         if self.scraped_at is None:
-            self.scraped_at = datetime.utcnow()
+            self.scraped_at = datetime.now(timezone.utc)
         if self.price_tiers is None:
             self.price_tiers = []
 
@@ -407,7 +407,7 @@ class CompetitorPricingTools(Toolkit):
                             """), {
                                 "product_id": product_id,
                                 "competitor_id": comp_id,
-                                "cutoff": datetime.utcnow() - timedelta(hours=cache_hours)
+                                "cutoff": datetime.now(timezone.utc) - timedelta(hours=cache_hours)
                             })
                             
                             cached = cache_result.fetchone()
@@ -478,7 +478,7 @@ class CompetitorPricingTools(Toolkit):
                                 "competitor": comp_name,
                                 "price": None,
                                 "status": "not_carried",
-                                "scraped_at": datetime.utcnow(),
+                                "scraped_at": datetime.now(timezone.utc),
                                 "url": comp_urls[0],
                                 "from_cache": False
                             })
@@ -492,13 +492,13 @@ class CompetitorPricingTools(Toolkit):
             return f"❌ Error checking prices: {str(e)}"
     
     async def bulk_price_check(self, products: List[Dict[str, str]], 
-                              competitors: List[str] = None) -> str:
+                              competitors: Optional[List[str]] = None) -> str:
         """
         Check prices for multiple products across competitors.
         
         Args:
-            products: List of dicts with 'name' and 'brand'
-            competitors: Optional list of competitor names
+            products: List of dicts with 'name' and 'brand' keys, e.g. [{"name": "Strawberry Gummies", "brand": "Wyld"}]
+            competitors: Optional list of competitor names to check
             
         Returns:
             Bulk pricing report
@@ -944,7 +944,7 @@ class CompetitorPricingTools(Toolkit):
                     else:
                         scraped_dt = item['scraped_at']
                     
-                    hours_ago = (datetime.utcnow() - scraped_dt).total_seconds() / 3600
+                    hours_ago = (datetime.now(timezone.utc) - scraped_dt).total_seconds() / 3600
                     if hours_ago < 1:
                         time_str = "< 1 hour ago"
                     elif hours_ago < 24:
@@ -1071,7 +1071,8 @@ def get_competitive_pricing_agent(
             
             2. **Bulk Analysis**:
                - Add all products and competitors first
-               - Use `bulk_price_check` for efficiency
+               - Use `bulk_price_check` with products list: [{"name": "product_name", "brand": "brand_name"}, ...]
+               - Optionally specify competitors list
                - Follow up with trend analysis
             
             3. **Web Scraping Strategy**:
