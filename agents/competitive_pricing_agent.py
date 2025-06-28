@@ -75,8 +75,8 @@ class CompetitorPricingTools(Toolkit):
         self.register(self.analyze_pricing_trends)
         self.register(self.search_product_urls)
         
-    async def track_product(self, name: str, brand: str, category: str = None, 
-                          search_terms: List[str] = None, metadata: Dict = None) -> str:
+    async def track_product(self, name: str, brand: str, category: Optional[str] = None, 
+                          search_terms: Optional[List[str]] = None, metadata: Optional[Dict[str, Any]] = None) -> str:
         """
         Add a product to price tracking.
         
@@ -123,7 +123,7 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"❌ Error adding product: {str(e)}"
     
-    async def add_competitor(self, name: str, urls: List[str], metadata: Optional[Dict] = None) -> str:
+    async def add_competitor(self, name: str, urls: List[str], metadata: Optional[Dict[str, Any]] = None) -> str:
         """
         Add a competitor to track.
         
