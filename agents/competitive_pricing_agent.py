@@ -57,7 +57,12 @@ class CompetitorPricingTools(Toolkit):
     def __init__(self, db_url: str):
         super().__init__(name="competitor_pricing_tools")
         self.db_url = db_url
-        self.engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''), poolclass=NullPool)
+        # Create engine with pool_pre_ping to handle stale connections
+        self.engine = create_engine(
+            db_url.replace('+asyncpg', '').replace('+aiopg', ''), 
+            poolclass=NullPool,
+            pool_pre_ping=True  # Test connections before using them
+        )
         self.Session = sessionmaker(bind=self.engine)
         
         # API keys from environment
@@ -335,7 +340,9 @@ class CompetitorPricingTools(Toolkit):
                         ORDER BY brand, name
                     """))
                     has_enabled = True
-                except:
+                except Exception as e:
+                    # Rollback the failed transaction
+                    session.rollback()
                     # Fallback for databases without enabled column
                     result = session.execute(text("""
                         SELECT name, brand, category, true as enabled, created_at
@@ -415,7 +422,9 @@ class CompetitorPricingTools(Toolkit):
                     
                     result = session.execute(query, params)
                     data = result.fetchall()
-                except:
+                except Exception as e:
+                    # Rollback the failed transaction
+                    session.rollback()
                     # Fallback to direct query if materialized view doesn't exist
                     query = text("""
                         SELECT DISTINCT ON (p.id, c.id)
@@ -1339,7 +1348,9 @@ class CompetitorPricingTools(Toolkit):
                                 VALUES (:name, :brand, true)
                                 RETURNING id
                             """), {"name": prod['name'], "brand": prod['brand']})
-                        except:
+                        except Exception as e:
+                            # Rollback the failed transaction
+                            session.rollback()
                             # Fallback for databases without enabled column
                             result = session.execute(text("""
                                 INSERT INTO pricing.products (name, brand)
