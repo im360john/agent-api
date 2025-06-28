@@ -10,6 +10,7 @@ from agents.web_agent import get_web_agent
 from agents.image_evaluator_agent import get_image_evaluator_agent
 from agents.color_changer_agent import get_color_changer_agent
 from agents.slack_treez_agent import get_slack_treez_agent
+from agents.competitive_pricing_agent import get_competitive_pricing_agent
 
 
 class AgentType(Enum):
@@ -22,6 +23,7 @@ class AgentType(Enum):
     IMAGE_EVALUATOR = "image_evaluator"
     COLOR_CHANGER = "color_changer"
     SLACK_TREEZ = "slack_treez"
+    COMPETITIVE_PRICING = "competitive_pricing"
 
 def get_available_agents() -> List[str]:
     """Returns a list of all available agent IDs."""
@@ -53,5 +55,7 @@ def get_agent(
         return get_color_changer_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
     elif agent_id == AgentType.SLACK_TREEZ:
         return get_slack_treez_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
+    elif agent_id == AgentType.COMPETITIVE_PRICING:
+        return get_competitive_pricing_agent(model_id=model_id, user_id=user_id, session_id=session_id, debug_mode=debug_mode)
 
     raise ValueError(f"Agent: {agent_id} not found")
