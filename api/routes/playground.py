@@ -8,6 +8,7 @@ from agents.treezlambda_agent import get_treezlambda_agent
 from agents.web_agent import get_web_agent
 from agents.image_evaluator_agent import get_image_evaluator_agent
 from agents.slack_treez_agent import get_slack_treez_agent
+from agents.competitive_pricing_agent import get_competitive_pricing_agent
 
 ######################################################
 ## Routes for the Playground Interface
@@ -22,9 +23,10 @@ product_image_agent = get_product_image_agent(debug_mode=True)
 client_agent = run_agent(debug_mode=True)
 image_evaluator_agent = get_image_evaluator_agent(debug_mode=True)
 slack_treez_agent = get_slack_treez_agent(debug_mode=True)
+competitive_pricing_agent = get_competitive_pricing_agent(debug_mode=True)
 
 # Create a playground instance
-playground = Playground(agents=[web_agent, agno_assist, finance_agent, treezlambda_agent, product_image_agent, client_agent, image_evaluator_agent, slack_treez_agent])
+playground = Playground(agents=[web_agent, agno_assist, finance_agent, treezlambda_agent, product_image_agent, client_agent, image_evaluator_agent, slack_treez_agent, competitive_pricing_agent])
 
 # Get the router for the playground
 playground_router = playground.get_async_router()
