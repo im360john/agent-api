@@ -74,11 +74,17 @@ class CompetitorPricingTools(Toolkit):
         self.register(self.delete_product)
         self.register(self.list_competitors)
         self.register(self.list_products)
+        self.register(self.analyze_price_freshness)
         self.register(self.check_prices)
         self.register(self.bulk_price_check)
         self.register(self.get_price_history)
         self.register(self.analyze_pricing_trends)
         self.register(self.search_product_urls)
+        # Batch processing tools
+        self.register(self.create_batch_job)
+        self.register(self.check_batch_status)
+        self.register(self.get_batch_results)
+        self.register(self.list_batch_jobs)
         
     async def track_product(self, name: str, brand: str, category: Optional[str] = None, 
                           search_terms: Optional[List[str]] = None, metadata: Optional[Dict[str, Any]] = None) -> str:
@@ -344,10 +350,136 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"❌ Error listing products: {str(e)}"
     
+    async def analyze_price_freshness(self, product_name: Optional[str] = None, 
+                                     brand: Optional[str] = None,
+                                     competitor_names: Optional[List[str]] = None) -> str:
+        """
+        Analyze the freshness of price data in the system.
+        
+        Args:
+            product_name: Optional product filter
+            brand: Optional brand filter
+            competitor_names: Optional list of competitors to check
+            
+        Returns:
+            Freshness analysis report
+        """
+        try:
+            with self.Session() as session:
+                # Build query for latest prices
+                query = text("""
+                    SELECT 
+                        lp.product_name,
+                        lp.brand,
+                        lp.competitor_name,
+                        lp.price,
+                        lp.scraped_at,
+                        lp.hours_old,
+                        lp.freshness_status,
+                        lp.availability_status
+                    FROM pricing.latest_prices lp
+                    WHERE 1=1
+                """)
+                
+                params = {}
+                
+                # Add filters if provided
+                if product_name and brand:
+                    query = text(str(query) + " AND lp.product_name = :product_name AND lp.brand = :brand")
+                    params["product_name"] = product_name
+                    params["brand"] = brand
+                elif product_name:
+                    query = text(str(query) + " AND lp.product_name ILIKE :product_pattern")
+                    params["product_pattern"] = f"%{product_name}%"
+                
+                if competitor_names:
+                    query = text(str(query) + " AND lp.competitor_name = ANY(:competitors)")
+                    params["competitors"] = competitor_names
+                
+                query = text(str(query) + " ORDER BY lp.hours_old DESC")
+                
+                result = session.execute(query, params)
+                data = result.fetchall()
+                
+                if not data:
+                    return "📊 No price data found for the specified criteria"
+                
+                # Categorize by freshness
+                fresh_count = sum(1 for row in data if row[6] == 'fresh')
+                stale_count = sum(1 for row in data if row[6] == 'stale')
+                old_count = sum(1 for row in data if row[6] == 'old')
+                
+                output = "📊 **Price Data Freshness Analysis**\n\n"
+                
+                # Summary
+                output += f"**Summary:**\n"
+                output += f"- Total price points: {len(data)}\n"
+                output += f"- 🟢 Fresh (<12h): {fresh_count} ({fresh_count/len(data)*100:.1f}%)\n"
+                output += f"- 🟡 Stale (12-24h): {stale_count} ({stale_count/len(data)*100:.1f}%)\n"
+                output += f"- 🔴 Old (>24h): {old_count} ({old_count/len(data)*100:.1f}%)\n\n"
+                
+                # Recommendations
+                if old_count > 0:
+                    output += f"**⚠️ Recommendation:** {old_count} price points need updating (>24h old)\n\n"
+                elif stale_count > len(data) * 0.5:
+                    output += f"**💡 Suggestion:** Consider refreshing {stale_count} stale price points\n\n"
+                else:
+                    output += "**✅ Status:** Most price data is fresh\n\n"
+                
+                # Detailed breakdown
+                output += "**Detailed Breakdown:**\n\n"
+                
+                # Group by product
+                from collections import defaultdict
+                by_product = defaultdict(list)
+                
+                for row in data:
+                    prod_key = f"{row[1]} {row[0]}"  # brand + name
+                    by_product[prod_key].append(row)
+                
+                for product, rows in sorted(by_product.items()):
+                    output += f"**{product}**\n"
+                    
+                    for row in sorted(rows, key=lambda x: x[5]):  # Sort by hours_old
+                        comp_name = row[2]
+                        price = f"${row[3]:.2f}" if row[3] else "N/A"
+                        hours = row[5]
+                        status_icon = {"fresh": "🟢", "stale": "🟡", "old": "🔴"}.get(row[6], "❓")
+                        avail = row[7]
+                        
+                        if hours < 1:
+                            time_str = "< 1 hour ago"
+                        else:
+                            time_str = f"{int(hours)} hours ago"
+                        
+                        output += f"  - {comp_name}: {price} - {status_icon} {time_str}"
+                        if avail != "in_stock":
+                            output += f" ({avail})"
+                        output += "\n"
+                    
+                    output += "\n"
+                
+                # Quick refresh suggestions
+                old_items = [row for row in data if row[6] == 'old']
+                if old_items:
+                    output += "**🔄 Quick Refresh Needed:**\n"
+                    for row in old_items[:5]:  # Show first 5
+                        output += f"- {row[1]} {row[0]} at {row[2]}\n"
+                    if len(old_items) > 5:
+                        output += f"- ... and {len(old_items) - 5} more\n"
+                
+                return output
+                
+        except Exception as e:
+            # Check if materialized view exists
+            if "latest_prices" in str(e):
+                return "❌ Freshness analysis not available. Database views may need to be created."
+            return f"❌ Error analyzing freshness: {str(e)}"
+    
     async def check_prices(self, product_name: str, brand: Optional[str] = None, 
                           competitor_names: List[str] = None, force_refresh: bool = False) -> str:
         """
-        Check current prices for a product across competitors.
+        Check current prices for a product across competitors with smart freshness awareness.
         
         Args:
             product_name: Product to search for
@@ -356,7 +488,7 @@ class CompetitorPricingTools(Toolkit):
             force_refresh: Bypass cache and scrape fresh data
             
         Returns:
-            Formatted price comparison
+            Formatted price comparison with freshness indicators
         """
         try:
             with self.Session() as session:
@@ -384,9 +516,8 @@ class CompetitorPricingTools(Toolkit):
                 
                 competitors = comp_result.fetchall()
                 
-                # Check cache freshness (default 24 hours)
-                cache_hours = 24
                 results = []
+                needs_refresh = []  # Track what needs updating
                 
                 for product in products:
                     product_id, prod_name, prod_brand, prod_meta = product
@@ -394,36 +525,56 @@ class CompetitorPricingTools(Toolkit):
                     for competitor in competitors:
                         comp_id, comp_name, comp_urls = competitor
                         
-                        # Check if we have recent data
+                        # Check if we have ANY data (not just recent)
                         if not force_refresh:
                             cache_result = session.execute(text("""
-                                SELECT price, member_price, availability_status, scraped_at, url
+                                SELECT price, member_price, availability_status, scraped_at, url,
+                                       EXTRACT(EPOCH FROM (NOW() - scraped_at))/3600 as hours_old
                                 FROM pricing.price_history
                                 WHERE product_id = :product_id 
                                   AND competitor_id = :competitor_id
-                                  AND scraped_at > :cutoff
                                 ORDER BY scraped_at DESC
                                 LIMIT 1
                             """), {
                                 "product_id": product_id,
-                                "competitor_id": comp_id,
-                                "cutoff": datetime.now(timezone.utc) - timedelta(hours=cache_hours)
+                                "competitor_id": comp_id
                             })
                             
                             cached = cache_result.fetchone()
                             if cached:
-                                price, member_price, status, scraped_at, url = cached
-                                results.append({
-                                    "product": f"{prod_brand} {prod_name}",
-                                    "competitor": comp_name,
-                                    "price": float(price) if price else None,
-                                    "member_price": float(member_price) if member_price else None,
-                                    "status": status,
-                                    "scraped_at": scraped_at,
-                                    "url": url,
-                                    "from_cache": True
-                                })
-                                continue
+                                price, member_price, status, scraped_at, url, hours_old = cached
+                                
+                                # Determine freshness status
+                                if hours_old < 12:
+                                    freshness = "fresh"
+                                elif hours_old < 24:
+                                    freshness = "stale"
+                                else:
+                                    freshness = "old"
+                                
+                                # Only use cached data if fresh enough
+                                if freshness in ["fresh", "stale"]:
+                                    results.append({
+                                        "product": f"{prod_brand} {prod_name}",
+                                        "competitor": comp_name,
+                                        "price": float(price) if price else None,
+                                        "member_price": float(member_price) if member_price else None,
+                                        "status": status,
+                                        "scraped_at": scraped_at,
+                                        "url": url,
+                                        "from_cache": True,
+                                        "freshness": freshness,
+                                        "hours_old": hours_old
+                                    })
+                                    
+                                    # Track stale data for potential refresh
+                                    if freshness == "stale":
+                                        needs_refresh.append((product_id, prod_name, prod_brand, comp_id, comp_name))
+                                    
+                                    continue
+                                else:
+                                    # Old data - will refresh automatically
+                                    needs_refresh.append((product_id, prod_name, prod_brand, comp_id, comp_name))
                         
                         # Need to scrape fresh data
                         search_query = f"{prod_brand} {prod_name}"
@@ -459,7 +610,9 @@ class CompetitorPricingTools(Toolkit):
                                 "status": scraped_data.availability_status,
                                 "scraped_at": scraped_data.scraped_at,
                                 "url": scraped_data.url,
-                                "from_cache": False
+                                "from_cache": False,
+                                "freshness": "fresh",
+                                "hours_old": 0
                             })
                         else:
                             # Product not found at competitor
@@ -480,13 +633,25 @@ class CompetitorPricingTools(Toolkit):
                                 "status": "not_carried",
                                 "scraped_at": datetime.now(timezone.utc),
                                 "url": comp_urls[0],
-                                "from_cache": False
+                                "from_cache": False,
+                                "freshness": "fresh",
+                                "hours_old": 0
                             })
                 
                 session.commit()
                 
-                # Format results
-                return self._format_price_results(results)
+                # Format results with freshness info
+                output = self._format_price_results_with_freshness(results)
+                
+                # Add refresh suggestions if needed
+                if needs_refresh and not force_refresh:
+                    output += "\n💡 **Freshness Notice:**\n"
+                    stale_count = sum(1 for r in results if r.get('freshness') == 'stale')
+                    if stale_count > 0:
+                        output += f"- {stale_count} price points are 12-24 hours old (marked with 🟡)\n"
+                        output += "- Use `force_refresh=True` to update all prices\n"
+                
+                return output
                 
         except Exception as e:
             return f"❌ Error checking prices: {str(e)}"
@@ -982,6 +1147,493 @@ class CompetitorPricingTools(Toolkit):
             output += "\n"
         
         return output
+    
+    def _format_price_results_with_freshness(self, results: List[Dict]) -> str:
+        """Format price results with freshness indicators"""
+        if not results:
+            return "No price data available."
+        
+        # Group by product
+        by_product = {}
+        for result in results:
+            prod = result["product"]
+            if prod not in by_product:
+                by_product[prod] = []
+            by_product[prod].append(result)
+        
+        output = "## 💰 Competitive Pricing Report\n\n"
+        
+        for product, data in by_product.items():
+            output += f"### {product}\n\n"
+            output += "| Competitor | Price | Member Price | Status | Freshness | Last Updated |\n"
+            output += "|------------|-------|--------------|--------|-----------|---------------|\n"
+            
+            # Sort by price
+            data.sort(key=lambda x: x.get("price") or float('inf'))
+            
+            for item in data:
+                price = f"${item['price']:.2f}" if item.get('price') else "—"
+                member = f"${item['member_price']:.2f}" if item.get('member_price') else "—"
+                
+                # Status emoji
+                status_emoji = {
+                    "in_stock": "✅",
+                    "out_of_stock": "⚠️",
+                    "not_carried": "❌"
+                }.get(item['status'], "❓")
+                
+                status = f"{status_emoji} {item['status'].replace('_', ' ').title()}"
+                
+                # Freshness indicator
+                freshness = item.get('freshness', 'unknown')
+                freshness_icon = {
+                    "fresh": "🟢",
+                    "stale": "🟡", 
+                    "old": "🔴",
+                    "unknown": "❓"
+                }.get(freshness, "❓")
+                
+                # Time since update
+                hours_old = item.get('hours_old', 0)
+                if hours_old < 1:
+                    time_str = "< 1 hour ago"
+                elif hours_old < 24:
+                    time_str = f"{int(hours_old)} hours ago"
+                else:
+                    time_str = f"{int(hours_old/24)} days ago"
+                
+                output += f"| {item['competitor']} | {price} | {member} | {status} | {freshness_icon} {freshness.title()} | {time_str} |\n"
+            
+            # Add insights
+            available_prices = [d['price'] for d in data if d.get('price') and d['status'] == 'in_stock']
+            if available_prices:
+                output += f"\n**Insights:**\n"
+                output += f"- 🏆 Best price: ${min(available_prices):.2f} at {[d['competitor'] for d in data if d['price'] == min(available_prices)][0]}\n"
+                output += f"- 📊 Average price: ${sum(available_prices)/len(available_prices):.2f}\n"
+                output += f"- 📈 Price range: ${min(available_prices):.2f} - ${max(available_prices):.2f}\n"
+                
+                # Freshness summary
+                fresh_count = sum(1 for d in data if d.get('freshness') == 'fresh')
+                stale_count = sum(1 for d in data if d.get('freshness') == 'stale')
+                old_count = sum(1 for d in data if d.get('freshness') == 'old')
+                
+                if fresh_count > 0:
+                    output += f"- 🟢 Fresh data: {fresh_count} competitors\n"
+                if stale_count > 0:
+                    output += f"- 🟡 Stale data (12-24h): {stale_count} competitors\n"
+                if old_count > 0:
+                    output += f"- 🔴 Old data (>24h): {old_count} competitors\n"
+                
+                # Out of stock warnings
+                out_of_stock = [d['competitor'] for d in data if d['status'] == 'out_of_stock']
+                if out_of_stock:
+                    output += f"- ⚠️ Out of stock at: {', '.join(out_of_stock)}\n"
+                
+                not_carried = [d['competitor'] for d in data if d['status'] == 'not_carried']
+                if not_carried:
+                    output += f"- ❌ Not carried by: {', '.join(not_carried)}\n"
+            
+            output += "\n"
+        
+        return output
+    
+    async def create_batch_job(self, products: List[Dict[str, str]], 
+                              competitor_names: Optional[List[str]] = None,
+                              job_name: Optional[str] = None,
+                              user_id: Optional[str] = None) -> str:
+        """
+        Create a batch job for checking multiple products across competitors.
+        
+        Args:
+            products: List of dicts with 'name' and 'brand' keys
+            competitor_names: Optional list of competitors (uses all if not specified)
+            job_name: Optional name for the job
+            user_id: User creating the job
+            
+        Returns:
+            Job creation confirmation with ID and estimates
+        """
+        try:
+            with self.Session() as session:
+                # Validate products
+                if not products:
+                    return "❌ No products specified for batch job"
+                
+                # Get all product IDs
+                product_ids = []
+                for prod in products:
+                    if 'name' not in prod or 'brand' not in prod:
+                        return "❌ Each product must have 'name' and 'brand' fields"
+                    
+                    result = session.execute(text("""
+                        SELECT id FROM pricing.products 
+                        WHERE name = :name AND brand = :brand
+                    """), {"name": prod['name'], "brand": prod['brand']})
+                    
+                    product_row = result.fetchone()
+                    if product_row:
+                        product_ids.append(product_row[0])
+                    else:
+                        # Track product if it doesn't exist
+                        result = session.execute(text("""
+                            INSERT INTO pricing.products (name, brand, enabled)
+                            VALUES (:name, :brand, true)
+                            RETURNING id
+                        """), {"name": prod['name'], "brand": prod['brand']})
+                        product_ids.append(result.fetchone()[0])
+                
+                # Get competitor IDs
+                if competitor_names:
+                    comp_result = session.execute(text("""
+                        SELECT id FROM pricing.competitors 
+                        WHERE enabled = true AND name = ANY(:names)
+                    """), {"names": competitor_names})
+                else:
+                    comp_result = session.execute(text("""
+                        SELECT id FROM pricing.competitors WHERE enabled = true
+                    """))
+                
+                competitor_ids = [row[0] for row in comp_result]
+                
+                if not competitor_ids:
+                    return "❌ No active competitors found"
+                
+                # Calculate total checks
+                total_checks = len(product_ids) * len(competitor_ids)
+                
+                # Prompt for confirmation if large job
+                if total_checks > 50:
+                    estimated_time = (total_checks * 2) / 60  # ~2 seconds per check
+                    confirmation = f"⚠️ This will create {total_checks} price checks (~{estimated_time:.1f} minutes). "
+                    
+                    # Check how many already have fresh data
+                    fresh_result = session.execute(text("""
+                        SELECT COUNT(*) FROM pricing.price_history ph
+                        WHERE product_id = ANY(:products)
+                        AND competitor_id = ANY(:competitors)
+                        AND scraped_at > NOW() - INTERVAL '12 hours'
+                    """), {"products": product_ids, "competitors": competitor_ids})
+                    
+                    fresh_count = fresh_result.fetchone()[0]
+                    stale_count = total_checks - fresh_count
+                    
+                    if fresh_count > 0:
+                        confirmation += f"\n\n📊 Cache Status:\n"
+                        confirmation += f"- 🟢 Fresh data: {fresh_count} price points\n"
+                        confirmation += f"- 🔴 Needs update: {stale_count} price points\n"
+                        confirmation += f"\nConsider checking only stale prices to save time."
+                    
+                    return confirmation + "\n\nTo proceed, call create_batch_job again with confirm=True"
+                
+                # Create the batch job
+                import uuid
+                job_id = str(uuid.uuid4())
+                
+                session.execute(text("""
+                    INSERT INTO pricing.batch_jobs 
+                    (id, name, total_checks, created_by, metadata)
+                    VALUES (:id, :name, :total, :user, :metadata)
+                """), {
+                    "id": job_id,
+                    "name": job_name or f"Batch price check - {len(products)} products",
+                    "total": total_checks,
+                    "user": user_id or "system",
+                    "metadata": json.dumps({
+                        "products": products,
+                        "competitors": competitor_names or "all"
+                    })
+                })
+                
+                # Create job items
+                for prod_id in product_ids:
+                    for comp_id in competitor_ids:
+                        session.execute(text("""
+                            INSERT INTO pricing.batch_job_items
+                            (batch_job_id, product_id, competitor_id)
+                            VALUES (:job_id, :prod_id, :comp_id)
+                        """), {
+                            "job_id": job_id,
+                            "prod_id": prod_id,
+                            "comp_id": comp_id
+                        })
+                
+                session.commit()
+                
+                # Return confirmation
+                output = f"✅ **Batch Job Created**\n\n"
+                output += f"- Job ID: `{job_id}`\n"
+                output += f"- Total checks: {total_checks}\n"
+                output += f"- Products: {len(product_ids)}\n"
+                output += f"- Competitors: {len(competitor_ids)}\n"
+                output += f"- Estimated time: ~{(total_checks * 2) / 60:.1f} minutes\n\n"
+                output += f"Use `check_batch_status('{job_id}')` to monitor progress"
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error creating batch job: {str(e)}"
+    
+    async def check_batch_status(self, job_id: str) -> str:
+        """
+        Check the status of a batch job.
+        
+        Args:
+            job_id: UUID of the batch job
+            
+        Returns:
+            Status report with progress
+        """
+        try:
+            with self.Session() as session:
+                # Get job details
+                result = session.execute(text("""
+                    SELECT name, status, total_checks, completed_checks,
+                           created_at, started_at, completed_at, error_message
+                    FROM pricing.batch_jobs
+                    WHERE id = :job_id
+                """), {"job_id": job_id})
+                
+                job = result.fetchone()
+                if not job:
+                    return f"❌ Batch job not found: {job_id}"
+                
+                name, status, total, completed, created, started, finished, error = job
+                
+                # Calculate progress
+                progress = (completed / total * 100) if total > 0 else 0
+                
+                # Status emoji
+                status_emoji = {
+                    "pending": "⏳",
+                    "running": "🔄",
+                    "completed": "✅",
+                    "failed": "❌",
+                    "cancelled": "🚫"
+                }.get(status, "❓")
+                
+                output = f"## {status_emoji} Batch Job Status\n\n"
+                output += f"**{name}**\n\n"
+                output += f"- Status: {status.upper()}\n"
+                output += f"- Progress: {completed}/{total} ({progress:.1f}%)\n"
+                
+                # Progress bar
+                bar_length = 20
+                filled = int(bar_length * progress / 100)
+                bar = "█" * filled + "░" * (bar_length - filled)
+                output += f"- [{bar}]\n\n"
+                
+                # Timing info
+                if started:
+                    elapsed = (finished or datetime.now(timezone.utc)) - started
+                    output += f"- Started: {started.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                    output += f"- Elapsed: {elapsed.total_seconds() / 60:.1f} minutes\n"
+                    
+                    if status == "running" and completed > 0:
+                        rate = completed / elapsed.total_seconds()
+                        remaining = (total - completed) / rate / 60
+                        output += f"- ETA: ~{remaining:.1f} minutes\n"
+                
+                if finished:
+                    output += f"- Completed: {finished.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                
+                if error:
+                    output += f"\n⚠️ Error: {error}\n"
+                
+                # Get breakdown by status
+                if status in ["running", "completed"]:
+                    breakdown = session.execute(text("""
+                        SELECT status, COUNT(*) 
+                        FROM pricing.batch_job_items
+                        WHERE batch_job_id = :job_id
+                        GROUP BY status
+                    """), {"job_id": job_id})
+                    
+                    output += "\n**Breakdown:**\n"
+                    for item_status, count in breakdown:
+                        output += f"- {item_status.title()}: {count}\n"
+                
+                if status == "completed":
+                    output += f"\n✅ Job complete! Use `get_batch_results('{job_id}')` to retrieve results."
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error checking batch status: {str(e)}"
+    
+    async def get_batch_results(self, job_id: str, format: str = "summary") -> str:
+        """
+        Get results from a completed batch job.
+        
+        Args:
+            job_id: UUID of the batch job
+            format: Output format - 'summary', 'detailed', or 'csv'
+            
+        Returns:
+            Formatted results or download link
+        """
+        try:
+            with self.Session() as session:
+                # Check job is completed
+                result = session.execute(text("""
+                    SELECT status FROM pricing.batch_jobs WHERE id = :job_id
+                """), {"job_id": job_id})
+                
+                job = result.fetchone()
+                if not job:
+                    return f"❌ Batch job not found: {job_id}"
+                
+                if job[0] != "completed":
+                    return f"❌ Job is not completed yet. Status: {job[0]}"
+                
+                # Get all results
+                results = session.execute(text("""
+                    SELECT 
+                        p.name as product_name,
+                        p.brand,
+                        c.name as competitor_name,
+                        ph.price,
+                        ph.member_price,
+                        ph.availability_status,
+                        ph.scraped_at,
+                        ph.url
+                    FROM pricing.batch_job_items bji
+                    JOIN pricing.products p ON bji.product_id = p.id
+                    JOIN pricing.competitors c ON bji.competitor_id = c.id
+                    LEFT JOIN LATERAL (
+                        SELECT * FROM pricing.price_history
+                        WHERE product_id = bji.product_id
+                        AND competitor_id = bji.competitor_id
+                        ORDER BY scraped_at DESC
+                        LIMIT 1
+                    ) ph ON true
+                    WHERE bji.batch_job_id = :job_id
+                    ORDER BY p.brand, p.name, ph.price
+                """), {"job_id": job_id})
+                
+                data = results.fetchall()
+                
+                if format == "csv":
+                    # Generate CSV
+                    import csv
+                    import io
+                    
+                    output = io.StringIO()
+                    writer = csv.writer(output)
+                    writer.writerow(["Brand", "Product", "Competitor", "Price", "Member Price", 
+                                   "Status", "Last Updated", "URL"])
+                    
+                    for row in data:
+                        writer.writerow(row)
+                    
+                    csv_content = output.getvalue()
+                    
+                    # In a real implementation, save to S3/blob storage and return URL
+                    return f"📄 CSV generated with {len(data)} rows.\n\n[Download would be available in production]"
+                
+                elif format == "detailed":
+                    # Detailed format - reuse existing formatting
+                    results_list = []
+                    for row in data:
+                        results_list.append({
+                            "product": f"{row[1]} {row[0]}",
+                            "competitor": row[2],
+                            "price": float(row[3]) if row[3] else None,
+                            "member_price": float(row[4]) if row[4] else None,
+                            "status": row[5] or "not_checked",
+                            "scraped_at": row[6],
+                            "url": row[7],
+                            "from_cache": True,
+                            "freshness": "fresh",
+                            "hours_old": 0
+                        })
+                    
+                    return self._format_price_results_with_freshness(results_list)
+                
+                else:  # summary format
+                    # Group by product
+                    by_product = {}
+                    for row in data:
+                        key = f"{row[1]} {row[0]}"
+                        if key not in by_product:
+                            by_product[key] = []
+                        by_product[key].append(row)
+                    
+                    output = f"## 📊 Batch Job Results Summary\n\n"
+                    output += f"Job ID: `{job_id}`\n"
+                    output += f"Products analyzed: {len(by_product)}\n\n"
+                    
+                    for product, competitors in by_product.items():
+                        prices = [c[3] for c in competitors if c[3] and c[5] == "in_stock"]
+                        
+                        if prices:
+                            output += f"**{product}**\n"
+                            output += f"- Price range: ${min(prices):.2f} - ${max(prices):.2f}\n"
+                            output += f"- Best price: ${min(prices):.2f} at {[c[2] for c in competitors if c[3] == min(prices)][0]}\n"
+                            output += f"- Availability: {len(prices)}/{len(competitors)} competitors\n\n"
+                    
+                    output += f"\nFor detailed results, use `get_batch_results('{job_id}', format='detailed')`"
+                    output += f"\nFor CSV export, use `get_batch_results('{job_id}', format='csv')`"
+                    
+                    return output
+                
+        except Exception as e:
+            return f"❌ Error getting batch results: {str(e)}"
+    
+    async def list_batch_jobs(self, user_id: Optional[str] = None, limit: int = 10) -> str:
+        """
+        List recent batch jobs.
+        
+        Args:
+            user_id: Filter by user (optional)
+            limit: Number of jobs to show
+            
+        Returns:
+            List of recent batch jobs
+        """
+        try:
+            with self.Session() as session:
+                query = text("""
+                    SELECT id, name, status, total_checks, completed_checks,
+                           created_at, created_by
+                    FROM pricing.batch_jobs
+                    WHERE (:user_id IS NULL OR created_by = :user_id)
+                    ORDER BY created_at DESC
+                    LIMIT :limit
+                """)
+                
+                result = session.execute(query, {"user_id": user_id, "limit": limit})
+                jobs = result.fetchall()
+                
+                if not jobs:
+                    return "📋 No batch jobs found"
+                
+                output = "## 📋 Recent Batch Jobs\n\n"
+                
+                for job in jobs:
+                    job_id, name, status, total, completed, created, creator = job
+                    
+                    # Status emoji
+                    status_emoji = {
+                        "pending": "⏳",
+                        "running": "🔄",
+                        "completed": "✅",
+                        "failed": "❌",
+                        "cancelled": "🚫"
+                    }.get(status, "❓")
+                    
+                    progress = (completed / total * 100) if total > 0 else 0
+                    
+                    output += f"{status_emoji} **{name}**\n"
+                    output += f"   - ID: `{job_id}`\n"
+                    output += f"   - Status: {status} ({progress:.0f}%)\n"
+                    output += f"   - Checks: {completed}/{total}\n"
+                    output += f"   - Created: {created.strftime('%Y-%m-%d %H:%M UTC')}\n"
+                    output += f"   - By: {creator}\n\n"
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error listing batch jobs: {str(e)}"
 
 
 def get_competitive_pricing_agent(
@@ -1052,15 +1704,27 @@ def get_competitive_pricing_agent(
                - Track both carried and not-carried products
             
             3. **Price Monitoring**
-               - Use `check_prices` for current pricing (checks cache first)
+               - Use `check_prices` for current pricing (smart cache-aware)
+               - Use `analyze_price_freshness` to check data age before scraping
                - Use `bulk_price_check` for multiple products
                - Force refresh with force_refresh=True parameter
                - Track regular and member pricing tiers
+               - Data freshness indicators:
+                 * 🟢 Fresh: < 12 hours old (used automatically)
+                 * 🟡 Stale: 12-24 hours old (used but flagged)
+                 * 🔴 Old: > 24 hours old (auto-refreshed)
             
             4. **Analysis & Insights**
                - Use `get_price_history` for trend data
                - Use `analyze_pricing_trends` for market insights
                - Identify pricing patterns and opportunities
+            
+            5. **Batch Processing** (for large operations)
+               - Use `create_batch_job` for 50+ price checks
+               - Monitor with `check_batch_status` 
+               - Retrieve results with `get_batch_results`
+               - List jobs with `list_batch_jobs`
+               - Supports CSV export for analysis
             
             ## Workflow for New Requests:
             
@@ -1068,12 +1732,21 @@ def get_competitive_pricing_agent(
                - First check if product is already tracked
                - If not, use `track_product` to add it
                - Then use `check_prices` to get current data
+               - Smart caching: Returns mix of cached and fresh data
+               - Use `force_refresh=True` to bypass all caching
             
-            2. **Bulk Analysis**:
+            2. **Bulk Analysis** (< 50 checks):
                - Add all products and competitors first
                - Use `bulk_price_check` with products list: [{"name": "product_name", "brand": "brand_name"}, ...]
                - Optionally specify competitors list
                - Follow up with trend analysis
+            
+            3. **Large Scale Operations** (50+ checks):
+               - Use `create_batch_job` for async processing
+               - System will warn if >50 checks and show cache status
+               - Monitor progress with `check_batch_status`
+               - Retrieve results when complete
+               - Export to CSV for external analysis
             
             3. **Web Scraping Strategy**:
                - System automatically tries Firecrawl first (fast, LLM-powered)
