@@ -477,7 +477,7 @@ class CompetitorPricingTools(Toolkit):
             return f"❌ Error analyzing freshness: {str(e)}"
     
     async def check_prices(self, product_name: str, brand: Optional[str] = None, 
-                          competitor_names: List[str] = None, force_refresh: bool = False) -> str:
+                          competitor_names: Optional[List[str]] = None, force_refresh: bool = False) -> str:
         """
         Check current prices for a product across competitors with smart freshness awareness.
         
@@ -578,8 +578,9 @@ class CompetitorPricingTools(Toolkit):
                         
                         # Need to scrape fresh data
                         search_query = f"{prod_brand} {prod_name}"
+                        # prod_meta is already a dict from the database JSONB column
                         scraped_data = await self._scrape_competitor_price(
-                            comp_name, comp_urls[0], search_query, json.loads(prod_meta) if prod_meta else {}
+                            comp_name, comp_urls[0], search_query, prod_meta if prod_meta else {}
                         )
                         
                         if scraped_data:
