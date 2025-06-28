@@ -20,6 +20,7 @@ dnspython==2.7.0
 docstring-parser==0.16
 duckduckgo-search==8.0.4
 email-validator==2.2.0
+exa-py==1.14.13
 fastapi==0.115.12
 fastapi-cli==0.0.7
 firecrawl-py==2.8.0

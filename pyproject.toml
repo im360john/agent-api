@@ -31,6 +31,7 @@ dependencies = [
   "google-cloud-vision>=3.5.0",
   "imagehash>=4.3.1",
   "firecrawl-py",
+  "exa-py",
 ]
 
 [project.optional-dependencies]
