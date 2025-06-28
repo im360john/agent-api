@@ -85,6 +85,7 @@ class CompetitorPricingTools(Toolkit):
         self.register(self.get_price_history)
         self.register(self.analyze_pricing_trends)
         self.register(self.search_product_urls)
+        self.register(self.discover_product_variants)
         # Batch processing tools
         self.register(self.create_batch_job)
         self.register(self.check_batch_status)
@@ -557,7 +558,7 @@ class CompetitorPricingTools(Toolkit):
         """
         try:
             with self.Session() as session:
-                # Find the product
+                # Find the product - first try exact match
                 query = "SELECT id, name, brand, metadata FROM pricing.products WHERE LOWER(name) LIKE :name"
                 params = {"name": f"%{product_name.lower()}%"}
                 
@@ -567,6 +568,47 @@ class CompetitorPricingTools(Toolkit):
                 
                 result = session.execute(text(query), params)
                 products = result.fetchall()
+                
+                # If no exact match, try to find variants
+                if not products and brand:
+                    # Extract base product name (remove dosage, ratios, etc)
+                    base_words = []
+                    for word in product_name.split():
+                        # Skip common variant indicators
+                        if not any(indicator in word.lower() for indicator in ['mg', 'cbd', 'thc', ':', '100', '50', '20', '10', '5']):
+                            base_words.append(word)
+                    
+                    if base_words:
+                        base_product = ' '.join(base_words)
+                        
+                        # Search for all variants of this base product
+                        variant_query = """
+                            SELECT id, name, brand, metadata 
+                            FROM pricing.products 
+                            WHERE LOWER(brand) = :brand 
+                            AND LOWER(name) LIKE :base_pattern
+                            ORDER BY name
+                        """
+                        variant_params = {
+                            "brand": brand.lower(),
+                            "base_pattern": f"%{base_product.lower()}%"
+                        }
+                        
+                        variant_result = session.execute(text(variant_query), variant_params)
+                        variants = variant_result.fetchall()
+                        
+                        if variants:
+                            # Show available variants
+                            output = f"❌ Exact product '{product_name}' not found.\n\n"
+                            output += f"📋 **Available {brand} variants containing '{base_product}':**\n"
+                            for _, var_name, var_brand, _ in variants:
+                                output += f"• {var_brand} {var_name}\n"
+                            
+                            output += f"\n💡 **Tip:** Search for a specific variant from the list above for accurate pricing."
+                            output += f"\n\n🔍 **Showing prices for all {base_product} variants:**\n"
+                            
+                            # Set products to all variants for price checking
+                            products = variants
                 
                 if not products:
                     return f"❌ Product not found: {product_name}"
@@ -924,6 +966,60 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"❌ Error analyzing trends: {str(e)}"
     
+    async def discover_product_variants(self, base_product: str, brand: str) -> str:
+        """
+        Discover all variants of a product across competitors.
+        
+        Args:
+            base_product: Base product name (e.g., "Strawberry Gummies")
+            brand: Brand name (e.g., "Wyld")
+            
+        Returns:
+            Report of all discovered variants
+        """
+        try:
+            with self.Session() as session:
+                # Get all tracked variants
+                query = text("""
+                    SELECT DISTINCT p.name, p.id,
+                           COUNT(DISTINCT ph.competitor_id) as competitor_count,
+                           MAX(ph.scraped_at) as last_seen
+                    FROM pricing.products p
+                    LEFT JOIN pricing.price_history ph ON p.id = ph.product_id
+                    WHERE LOWER(p.brand) = :brand 
+                    AND LOWER(p.name) LIKE :pattern
+                    GROUP BY p.name, p.id
+                    ORDER BY p.name
+                """)
+                
+                result = session.execute(query, {
+                    "brand": brand.lower(),
+                    "pattern": f"%{base_product.lower()}%"
+                })
+                
+                variants = result.fetchall()
+                
+                if not variants:
+                    return f"No {brand} {base_product} variants found in the system."
+                
+                output = f"## 🔍 {brand} {base_product} Variants Discovery\n\n"
+                output += f"Found {len(variants)} variants:\n\n"
+                
+                for name, _, comp_count, last_seen in variants:
+                    output += f"**{name}**\n"
+                    output += f"  - Tracked at {comp_count} competitors\n"
+                    if last_seen:
+                        hours_ago = (datetime.now(timezone.utc) - last_seen).total_seconds() / 3600
+                        output += f"  - Last price data: {int(hours_ago)} hours ago\n"
+                    output += "\n"
+                
+                output += f"\n💡 **Tip:** Use 'check prices for [specific variant]' to see current pricing."
+                
+                return output
+                
+        except Exception as e:
+            return f"❌ Error discovering variants: {str(e)}"
+    
     async def search_product_urls(self, product_name: str, brand: str, 
                                  competitor_url: str) -> List[str]:
         """
@@ -1012,15 +1108,53 @@ class CompetitorPricingTools(Toolkit):
             PriceData object or None
         """
         try:
-            # First, search for product URLs
-            urls = await self.search_product_urls(
-                search_query.split()[1] if len(search_query.split()) > 1 else search_query,
-                search_query.split()[0] if len(search_query.split()) > 1 else "",
-                competitor_url
-            )
+            # For variant searches, also try base product name
+            search_queries = [search_query]
+            
+            # If the query contains variant indicators, also search for base product
+            if any(indicator in search_query.lower() for indicator in ['cbd', 'thc', 'mg', ':', 'hybrid']):
+                # Extract base product name
+                words = search_query.split()
+                base_words = []
+                brand_found = False
+                
+                for word in words:
+                    if not brand_found and word.lower() in ['wyld', 'kiva', 'camino', 'plus', 'wana']:
+                        base_words.append(word)
+                        brand_found = True
+                    elif not any(ind in word.lower() for ind in ['mg', 'cbd', 'thc', ':', '100', '50', '20', '10', '5', 'hybrid']):
+                        base_words.append(word)
+                
+                if len(base_words) > 1:  # Need at least brand + product
+                    base_query = ' '.join(base_words)
+                    search_queries.append(base_query)
+            
+            # Try searching with each query variant
+            all_urls = []
+            for query in search_queries:
+                # Extract brand and product name from query
+                parts = query.split()
+                if len(parts) > 1:
+                    brand = parts[0]
+                    product = ' '.join(parts[1:])
+                else:
+                    brand = ""
+                    product = query
+                
+                query_urls = await self.search_product_urls(product, brand, competitor_url)
+                if query_urls:
+                    all_urls.extend(query_urls)
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            urls = []
+            for url in all_urls:
+                if url not in seen:
+                    seen.add(url)
+                    urls.append(url)
             
             if not urls:
-                print(f"No product URLs found for {search_query} at {competitor_name}")
+                print(f"No product URLs found for {search_query} (or variants) at {competitor_name}")
                 return None
             
             # Try Firecrawl first on the top URL
@@ -1213,6 +1347,42 @@ class CompetitorPricingTools(Toolkit):
             output += "\n"
         
         return output
+    
+    def _is_product_variant(self, search_query: str, found_product: str) -> bool:
+        """Check if found product is a variant of the searched product"""
+        search_lower = search_query.lower()
+        found_lower = found_product.lower()
+        
+        # Direct match
+        if search_lower in found_lower or found_lower in search_lower:
+            return True
+        
+        # Extract base words (excluding dosage, ratios, etc)
+        def extract_base_words(text):
+            words = []
+            for word in text.split():
+                if not any(ind in word.lower() for ind in ['mg', 'cbd', 'thc', ':', '100', '50', '20', '10', '5', 'hybrid', 'enhanced']):
+                    words.append(word.lower())
+            return words
+        
+        search_base = extract_base_words(search_query)
+        found_base = extract_base_words(found_product)
+        
+        # Check if all search base words are in found product
+        if all(word in ' '.join(found_base) for word in search_base):
+            return True
+        
+        # Check specific patterns for cannabis products
+        # e.g., "Wyld Strawberry Gummies" matches "Wyld Strawberry 20:1 CBD Hybrid Gummies"
+        if len(search_base) >= 2 and len(found_base) >= 2:
+            # Brand and key product word match
+            if search_base[0] == found_base[0]:  # Same brand
+                # Check if key product words match
+                common_words = set(search_base) & set(found_base)
+                if len(common_words) >= 2:  # At least brand + one product word
+                    return True
+        
+        return False
     
     def _format_price_results_with_freshness(self, results: List[Dict]) -> str:
         """Format price results with freshness indicators"""
@@ -1803,6 +1973,12 @@ def get_competitive_pricing_agent(
                - List jobs with `list_batch_jobs`
                - Supports CSV export for analysis
             
+            6. **Product Variants** (NEW!)
+               - Use `discover_product_variants` to find all variants
+               - Automatically shows alternatives when exact match not found
+               - Handles CBD/THC ratios, dosages, and formulations
+               - Example: "Strawberry Gummies" finds all strawberry variants
+            
             ## Workflow for New Requests:
             
             1. **Single Product Check**:
@@ -1811,6 +1987,7 @@ def get_competitive_pricing_agent(
                - Then use `check_prices` to get current data
                - Smart caching: Returns mix of cached and fresh data
                - Use `force_refresh=True` to bypass all caching
+               - If product not found, system shows available variants
             
             2. **Bulk Analysis** (< 50 checks):
                - Add all products and competitors first
