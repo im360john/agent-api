@@ -123,7 +123,7 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"❌ Error adding product: {str(e)}"
     
-    async def add_competitor(self, name: str, urls: List[str], metadata: Dict = None) -> str:
+    async def add_competitor(self, name: str, urls: List[str], metadata: Optional[Dict] = None) -> str:
         """
         Add a competitor to track.
         
