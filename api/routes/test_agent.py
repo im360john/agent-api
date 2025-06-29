@@ -20,7 +20,7 @@ async def test_agent():
             name="test_agent",
             agent_id="test_agent",
             model=OpenAIChat(id="gpt-4o"),
-            tools=tools,
+            tools=[tools],
             instructions="You are a test agent.",
             markdown=True,
         )

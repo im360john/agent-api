@@ -62,7 +62,7 @@ def create_pricing_agent() -> Agent:
             name="competitive_pricing_chat",
             agent_id="competitive_pricing_chat", 
             model=OpenAIChat(id="gpt-4o"),
-            tools=tools,
+            tools=[tools],
             storage=PostgresAgentStorage(
                 table_name="competitive_pricing_chat_agents", 
                 db_url=db_url

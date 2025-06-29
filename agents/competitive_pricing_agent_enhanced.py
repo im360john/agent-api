@@ -552,7 +552,7 @@ def create_enhanced_agent() -> Agent:
         name="enhanced_competitive_pricing",
         agent_id="enhanced_competitive_pricing", 
         model=OpenAIChat(id="gpt-4o"),
-        tools=tools,
+        tools=[tools],
         storage=PostgresAgentStorage(table_name="enhanced_competitive_pricing_agents", db_url=db_url),
         memory=Memory(
             db=PostgresMemoryDb(
