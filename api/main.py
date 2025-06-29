@@ -25,6 +25,14 @@ except Exception as e:
     print(f"Warning: Could not import test router: {e}")
     TEST_ROUTER_AVAILABLE = False
 
+# Import sessions router
+try:
+    from api.routes.chat_sessions import sessions_router
+    SESSIONS_ROUTER_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Could not import sessions router: {e}")
+    SESSIONS_ROUTER_AVAILABLE = False
+
 # Import simple fallback
 try:
     from api.routes.chat_ui_simple import chat_router_simple
@@ -60,6 +68,10 @@ def create_app() -> FastAPI:
     # Add test router if available
     if TEST_ROUTER_AVAILABLE:
         app.include_router(test_router)
+    
+    # Add sessions router if available
+    if SESSIONS_ROUTER_AVAILABLE:
+        app.include_router(sessions_router)
 
     # Add Middlewares
     app.add_middleware(

@@ -78,6 +78,7 @@ def create_pricing_agent() -> Agent:
             db_url=db_url
         ),
         memory=Memory(
+            version="v2",
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
@@ -131,6 +132,111 @@ CHAT_HTML = """
             color: white;
             padding: 20px;
             overflow-y: auto;
+        }
+        
+        .sessions-panel {
+            width: 300px;
+            background-color: #f8f8f8;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .sessions-panel.collapsed {
+            margin-left: -300px;
+        }
+        
+        .sessions-header {
+            padding: 20px;
+            background-color: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .session-item {
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .session-item:hover {
+            background-color: #f5f5f5;
+            border-color: #2E7D32;
+        }
+        
+        .session-item.active {
+            background-color: #E8F5E9;
+            border-color: #2E7D32;
+        }
+        
+        .session-time {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .session-preview {
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .session-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .new-session-btn {
+            background-color: #2E7D32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .new-session-btn:hover {
+            background-color: #1B5E20;
+        }
+        
+        .delete-session-btn {
+            background-color: transparent;
+            color: #d32f2f;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .toggle-sessions-btn {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #2E7D32;
+            color: white;
+            border: none;
+            padding: 10px 5px;
+            cursor: pointer;
+            border-radius: 0 5px 5px 0;
+            z-index: 10;
         }
         
         .sidebar h2 {
@@ -339,6 +445,18 @@ CHAT_HTML = """
 </head>
 <body>
     <div class="container">
+        <button class="toggle-sessions-btn" onclick="toggleSessions()">☰</button>
+        
+        <div class="sessions-panel" id="sessionsPanel">
+            <div class="sessions-header">
+                <h3>Chat History</h3>
+                <button class="new-session-btn" onclick="createNewSession()">New Chat</button>
+            </div>
+            <div class="sessions-list" id="sessionsList">
+                <!-- Sessions will be loaded here -->
+            </div>
+        </div>
+        
         <div class="sidebar">
             <h2>Quick Actions</h2>
             <div class="quick-actions">
@@ -422,15 +540,29 @@ CHAT_HTML = """
     </div>
 
     <script>
+        // Session management
+        let currentUserId = localStorage.getItem('chatUserId') || generateUserId();
+        let currentSessionId = localStorage.getItem('currentSessionId') || generateSessionId();
+        localStorage.setItem('chatUserId', currentUserId);
+        localStorage.setItem('currentSessionId', currentSessionId);
+        
         // Use wss:// for HTTPS, ws:// for HTTP
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${protocol}//${window.location.host}/chat/ws`);
+        let ws = new WebSocket(`${protocol}//${window.location.host}/chat/ws`);
         const chatContainer = document.getElementById('chatContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typingIndicator');
         
         let isConnected = false;
+        
+        function generateUserId() {
+            return 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        }
+        
+        function generateSessionId() {
+            return 'session_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        }
         
         ws.onopen = () => {
             console.log('Connected to chat server');
@@ -475,21 +607,6 @@ CHAT_HTML = """
             }
         }
         
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message && !sendButton.disabled && isConnected) {
-                addMessage(message, 'user');
-                ws.send(JSON.stringify({
-                    type: 'message',
-                    content: message
-                }));
-                messageInput.value = '';
-                sendButton.disabled = true;
-                typingIndicator.classList.add('active');
-            } else if (!isConnected) {
-                addMessage('Not connected. Please refresh the page.', 'assistant');
-            }
-        }
         
         function sendQuickAction(action) {
             messageInput.value = action;
@@ -519,6 +636,166 @@ CHAT_HTML = """
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
+        
+        // Session management functions
+        function toggleSessions() {
+            const panel = document.getElementById('sessionsPanel');
+            panel.classList.toggle('collapsed');
+        }
+        
+        async function loadSessions() {
+            try {
+                const response = await fetch(`/chat/sessions/?user_id=${currentUserId}`);
+                const sessions = await response.json();
+                
+                const sessionsList = document.getElementById('sessionsList');
+                sessionsList.innerHTML = '';
+                
+                sessions.forEach(session => {
+                    const sessionDiv = document.createElement('div');
+                    sessionDiv.className = 'session-item';
+                    if (session.session_id === currentSessionId) {
+                        sessionDiv.classList.add('active');
+                    }
+                    
+                    const date = new Date(session.last_message_at || session.created_at);
+                    const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                    
+                    sessionDiv.innerHTML = `
+                        <div class="session-time">${timeStr}</div>
+                        <div class="session-preview">${session.first_message || 'New conversation'}</div>
+                        <div class="session-actions">
+                            <button class="delete-session-btn" onclick="deleteSession('${session.session_id}', event)">Delete</button>
+                        </div>
+                    `;
+                    
+                    sessionDiv.onclick = (e) => {
+                        if (!e.target.classList.contains('delete-session-btn')) {
+                            loadSession(session.session_id);
+                        }
+                    };
+                    
+                    sessionsList.appendChild(sessionDiv);
+                });
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+            }
+        }
+        
+        async function loadSession(sessionId) {
+            try {
+                // Save current session first
+                localStorage.setItem('currentSessionId', sessionId);
+                currentSessionId = sessionId;
+                
+                // Load messages
+                const response = await fetch(`/chat/sessions/${sessionId}/messages?user_id=${currentUserId}`);
+                const messages = await response.json();
+                
+                // Clear chat container
+                chatContainer.innerHTML = '';
+                
+                // Add messages
+                messages.forEach(msg => {
+                    addMessage(msg.content, msg.role === 'user' ? 'user' : 'assistant');
+                });
+                
+                // Update active session in UI
+                document.querySelectorAll('.session-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Reload sessions to update active state
+                loadSessions();
+                
+            } catch (error) {
+                console.error('Error loading session:', error);
+            }
+        }
+        
+        async function createNewSession() {
+            currentSessionId = generateSessionId();
+            localStorage.setItem('currentSessionId', currentSessionId);
+            
+            // Clear chat
+            chatContainer.innerHTML = `
+                <div class="message assistant">
+                    <div class="message-content">
+                        <p>Welcome to the Competitive Pricing Assistant!</p>
+                        <p>I can help you:</p>
+                        <ul>
+                            <li><strong>Check prices</strong> across all competitors</li>
+                            <li><strong>Track products</strong> and monitor changes</li>
+                            <li><strong>Analyze trends</strong> and price history</li>
+                            <li><strong>Create batch jobs</strong> for bulk price checking</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>How to use:</strong></p>
+                        <p>Just ask for prices! I'll automatically track new products and fetch current prices. For example:</p>
+                        <ul>
+                            <li>"Get prices for Wyld Sour Apple Sativa"</li>
+                            <li>"Check prices for all Kiva products"</li>
+                            <li>"Show me Camino gummies prices at Harborside"</li>
+                        </ul>
+                        <p style="margin-top: 10px;">Try the quick actions on the left or type your own query!</p>
+                    </div>
+                </div>
+            `;
+            
+            // Reload sessions
+            loadSessions();
+        }
+        
+        async function deleteSession(sessionId, event) {
+            event.stopPropagation();
+            
+            if (!confirm('Are you sure you want to delete this conversation?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/chat/sessions/${sessionId}?user_id=${currentUserId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // If deleting current session, create a new one
+                    if (sessionId === currentSessionId) {
+                        createNewSession();
+                    } else {
+                        loadSessions();
+                    }
+                }
+            } catch (error) {
+                console.error('Error deleting session:', error);
+            }
+        }
+        
+        // Update WebSocket message to include user and session IDs
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && !sendButton.disabled && isConnected) {
+                addMessage(message, 'user');
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    content: message,
+                    user_id: currentUserId,
+                    session_id: currentSessionId
+                }));
+                messageInput.value = '';
+                sendButton.disabled = true;
+                typingIndicator.classList.add('active');
+            } else if (!isConnected) {
+                addMessage('Not connected. Please refresh the page.', 'assistant');
+            }
+        }
+        
+        // Load sessions on page load
+        window.addEventListener('load', () => {
+            loadSessions();
+        });
+        
+        // Reload sessions periodically to show updates
+        setInterval(loadSessions, 30000); // Every 30 seconds
     </script>
 </body>
 </html>
@@ -561,14 +838,17 @@ async def websocket_endpoint(websocket: WebSocket):
             
             if data.get("type") == "message":
                 message = data.get("content", "")
+                # Extract user_id and session_id from the message
+                user_id = data.get("user_id", client_id)
+                session_id = data.get("session_id", client_id)
                 
                 # Run agent with proper error handling
                 try:
                     # Use async run method since our tools are async
                     response = await agent.arun(
                         message,
-                        user_id=client_id,
-                        session_id=client_id
+                        user_id=user_id,
+                        session_id=session_id
                     )
                     
                     # Send response
