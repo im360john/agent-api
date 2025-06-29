@@ -16,6 +16,7 @@ from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.models.openai import OpenAIChat
+from agno.models.anthropic import Claude  # Ensure anthropic is imported
 from agno.storage.agent.postgres import PostgresAgentStorage
 from agno.tools.toolkit import Toolkit
 from agno.tools.firecrawl import FirecrawlTools
