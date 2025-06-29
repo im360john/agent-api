@@ -78,7 +78,6 @@ def create_pricing_agent() -> Agent:
             db_url=db_url
         ),
         memory=Memory(
-            version="v2",
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
