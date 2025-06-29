@@ -98,10 +98,20 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
-            )
+            ),
+            # Enable session-specific memory
+            create_user_memories=True,
+            create_session_summary=True,
         ),
         instructions=instructions,
         markdown=True,
+        # Enable history and context awareness
+        add_datetime_to_instructions=True,
+        add_history_to_messages=True,
+        num_history_runs=3,
+        show_full_reasoning=True,
+        # Use Sonnet 4 as reasoning model when using Claude
+        reasoning_model=AnthropicChat(id="claude-sonnet-4-20250514") if model_id.startswith("claude") else None,
     )
 
 # Cache agent instance
