@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chat Sessions UI</title>
+</head>
+<body>
+    <h1>Chat Sessions UI Test</h1>
+    <p>Testing the chat sessions functionality at: https://agent-api-xk5r.onrender.com/chat/</p>
+    
+    <h2>What to test:</h2>
+    <ol>
+        <li><strong>Look for the hamburger menu (☰)</strong>
+            <ul>
+                <li>It should be on the LEFT side of the page</li>
+                <li>It's a toggle button to show/hide the sessions panel</li>
+                <li>Click it to reveal the Chat History panel</li>
+            </ul>
+        </li>
+        
+        <li><strong>Sessions Panel</strong>
+            <ul>
+                <li>When you click ☰, a panel should slide out from the left</li>
+                <li>It should show "Chat History" at the top</li>
+                <li>There should be a "New Chat" button</li>
+                <li>Any previous chat sessions will be listed</li>
+            </ul>
+        </li>
+        
+        <li><strong>Test Creating Sessions</strong>
+            <ul>
+                <li>Send a message in the chat</li>
+                <li>Click "New Chat" to start a fresh session</li>
+                <li>Send another message</li>
+                <li>Check if both sessions appear in the history</li>
+            </ul>
+        </li>
+        
+        <li><strong>Test Session Switching</strong>
+            <ul>
+                <li>Click on an old session in the history</li>
+                <li>The chat should load that session's messages</li>
+                <li>You can continue the conversation in that session</li>
+            </ul>
+        </li>
+        
+        <li><strong>Test Quick Actions</strong>
+            <ul>
+                <li>Click each quick action button</li>
+                <li>Verify they work and responses are saved to the session</li>
+            </ul>
+        </li>
+    </ol>
+    
+    <h2>Known Issues:</h2>
+    <ul>
+        <li>If you don't see the ☰ button, try:</li>
+        <li>Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)</li>
+        <li>Clear browser cache for the site</li>
+        <li>Try in an incognito/private window</li>
+    </ul>
+    
+    <h2>Direct Links:</h2>
+    <ul>
+        <li><a href="https://agent-api-xk5r.onrender.com/chat/" target="_blank">Open Chat Interface</a></li>
+        <li><a href="https://agent-api-xk5r.onrender.com/chat/sessions/?user_id=test" target="_blank">Test Sessions API</a></li>
+    </ul>
+</body>
+</html>

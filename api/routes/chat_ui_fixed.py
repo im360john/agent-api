@@ -8,6 +8,7 @@ from typing import Dict, Any
 from datetime import datetime
 
 from agno.models.openai import OpenAIChat
+from agno.models.anthropic import AnthropicChat
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
@@ -40,23 +41,39 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # Create agent instance
-def create_pricing_agent() -> Agent:
-    """Create the competitive pricing agent"""
+def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
+    """Create the competitive pricing agent with specified model"""
     
     tools = CompetitorPricingTools(db_url=db_url)
     
+    # Select model based on model_id
+    if model_id.startswith("claude"):
+        model = AnthropicChat(id=model_id)
+    else:
+        model = OpenAIChat(id=model_id)
+    
     instructions = """You are a competitive pricing assistant for cannabis dispensaries.
 
-    IMPORTANT: When users ask for prices:
-    1. First use check_prices to search for the product
-    2. If multiple matches are found, the system will show them - ask the user to confirm which one
-    3. If no matches found and product needs to be tracked:
-       - Show the user what product will be tracked (with exact name and brand)
-       - Use track_product only after getting confirmation or being specific
-    4. Always show URLs scraped along with prices in your response
+    IMPORTANT WORKFLOWS:
+    
+    1. When users ask to track a product:
+       - Extract brand and product name from their request
+       - Show them what will be tracked: "Product: [name], Brand: [brand]"
+       - When they confirm with "yes", "proceed", "ok", etc., immediately call track_product(name, brand)
+       - After tracking, optionally check prices for the newly tracked product
+    
+    2. When users ask for prices:
+       - First use check_prices to search for the product
+       - If not found, offer to track it first (follow workflow #1)
+       - Always show URLs scraped along with prices
+    
+    3. When checking all tracked products:
+       - First call list_products() to get the list
+       - Then use check_prices for each product individually
+       - Do NOT use bulk_price_check without a products list
     
     Product Search Tips:
-    - The system uses fuzzy matching - partial names work (e.g., "sour apple" finds "Sour Apple Sativa Gummies")
+    - The system uses fuzzy matching - partial names work
     - Brand names are automatically detected from searches
     - If uncertain, show available options for user confirmation
     
@@ -64,14 +81,14 @@ def create_pricing_agent() -> Agent:
     - Check prices across competitors with smart product matching
     - Track products and manage competitors
     - Analyze pricing trends and history
-    - Provide batch processing capabilities
+    - Create batch jobs for large-scale price checking
     
     Format responses with clear tables and actionable insights."""
     
     return Agent(
         name="competitive_pricing_chat",
         agent_id="competitive_pricing_chat", 
-        model=OpenAIChat(id="gpt-4o"),
+        model=model,
         tools=[tools],
         storage=PostgresAgentStorage(
             table_name="competitive_pricing_chat_agents", 
@@ -90,11 +107,10 @@ def create_pricing_agent() -> Agent:
 # Cache agent instance
 _agent = None
 
-def get_agent():
-    global _agent
-    if _agent is None:
-        _agent = create_pricing_agent()
-    return _agent
+def get_agent(model_id: str = "claude-sonnet-4-20250514"):
+    # For now, create a new agent for each model to avoid conflicts
+    # In production, you might want to cache agents per model
+    return create_pricing_agent(model_id)
 
 # HTML template for the chat interface
 CHAT_HTML = """
@@ -495,6 +511,13 @@ CHAT_HTML = """
             <div class="header">
                 <h1>Competitive Pricing Assistant</h1>
                 <p>Track cannabis prices across dispensaries</p>
+                <div style="margin-top: 15px;">
+                    <label for="modelSelect" style="margin-right: 10px; color: #666;">AI Model:</label>
+                    <select id="modelSelect" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; background: white; cursor: pointer;">
+                        <option value="claude-sonnet-4-20250514" selected>Claude Sonnet 4 (Default)</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                    </select>
+                </div>
             </div>
             
             <div class="chat-container" id="chatContainer">
@@ -544,6 +567,16 @@ CHAT_HTML = """
         let currentSessionId = localStorage.getItem('currentSessionId') || generateSessionId();
         localStorage.setItem('chatUserId', currentUserId);
         localStorage.setItem('currentSessionId', currentSessionId);
+        
+        // Model selection
+        const modelSelect = document.getElementById('modelSelect');
+        let currentModel = localStorage.getItem('selectedModel') || 'claude-sonnet-4-20250514';
+        modelSelect.value = currentModel;
+        
+        modelSelect.addEventListener('change', (e) => {
+            currentModel = e.target.value;
+            localStorage.setItem('selectedModel', currentModel);
+        });
         
         // Use wss:// for HTTPS, ws:// for HTTP
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -778,7 +811,8 @@ CHAT_HTML = """
                     type: 'message',
                     content: message,
                     user_id: currentUserId,
-                    session_id: currentSessionId
+                    session_id: currentSessionId,
+                    model_id: currentModel
                 }));
                 messageInput.value = '';
                 sendButton.disabled = true;
@@ -789,8 +823,27 @@ CHAT_HTML = """
         }
         
         // Load sessions on page load
-        window.addEventListener('load', () => {
-            loadSessions();
+        window.addEventListener('load', async () => {
+            await loadSessions();
+            
+            // If we have a current session, load its messages
+            if (currentSessionId && currentSessionId !== 'null') {
+                try {
+                    const response = await fetch(`/chat/sessions/${currentSessionId}/messages?user_id=${currentUserId}`);
+                    if (response.ok) {
+                        const messages = await response.json();
+                        if (messages && messages.length > 0) {
+                            // Clear welcome message and load session messages
+                            chatContainer.innerHTML = '';
+                            messages.forEach(msg => {
+                                addMessage(msg.content, msg.role === 'user' ? 'user' : 'assistant');
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading current session:', error);
+                }
+            }
         });
         
         // Reload sessions periodically to show updates
@@ -809,11 +862,13 @@ async def chat_interface():
 async def health_check():
     """Health check endpoint for debugging"""
     try:
+        # Test with default model
         agent = get_agent()
         return {
             "status": "healthy",
             "agent": "initialized" if agent else "not initialized",
-            "websocket_path": "/chat/ws"
+            "websocket_path": "/chat/ws",
+            "default_model": "claude-sonnet-4-20250514"
         }
     except Exception as e:
         return {
@@ -829,7 +884,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket, client_id)
     
     try:
-        agent = get_agent()
+        # Agent will be created per message with the selected model
         
         while True:
             # Receive message
@@ -837,12 +892,16 @@ async def websocket_endpoint(websocket: WebSocket):
             
             if data.get("type") == "message":
                 message = data.get("content", "")
-                # Extract user_id and session_id from the message
+                # Extract user_id, session_id, and model_id from the message
                 user_id = data.get("user_id", client_id)
                 session_id = data.get("session_id", client_id)
+                model_id = data.get("model_id", "claude-sonnet-4-20250514")
                 
                 # Run agent with proper error handling
                 try:
+                    # Get agent with selected model
+                    agent = get_agent(model_id)
+                    
                     # Use async run method since our tools are async
                     response = await agent.arun(
                         message,
@@ -863,13 +922,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     error_details = traceback.format_exc()
                     print(f"Error in agent.arun: {error_details}")
                     
-                    await manager.send_message(
-                        json.dumps({
-                            "type": "response",
-                            "content": f"Error: {str(e)}\n\nPlease try rephrasing your request."
-                        }),
-                        client_id
-                    )
+                    try:
+                        await manager.send_message(
+                            json.dumps({
+                                "type": "response",
+                                "content": f"Error: {str(e)}\n\nPlease try rephrasing your request."
+                            }),
+                            client_id
+                        )
+                    except (WebSocketDisconnect, ConnectionError, RuntimeError):
+                        # Client already disconnected, just log it
+                        print(f"Client {client_id} disconnected before error could be sent")
                     
     except WebSocketDisconnect:
         manager.disconnect(client_id)
