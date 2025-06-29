@@ -15,8 +15,8 @@ from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
 # Import knowledge base components if available
 try:
-    from agno.knowledge.pdf import PDFKnowledgeBase
     from agno.vectordb.pgvector import PgVector
+    from agno.embedder.openai import OpenAIEmbedder
     KNOWLEDGE_BASE_AVAILABLE = True
 except ImportError:
     KNOWLEDGE_BASE_AVAILABLE = False
@@ -55,11 +55,11 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Select model based on model_id
     if model_id.startswith("claude"):
-        # Configure Claude with thinking mode and code execution
+        # Configure Claude with code execution
+        # Note: Thinking mode is temporarily disabled due to message format requirements
         model = Claude(
             id=model_id,
-            max_tokens=2048,
-            thinking={"type": "enabled", "budget_tokens": 1024},  # Proper thinking config
+            max_tokens=4096,
             default_headers={"anthropic-beta": "code-execution-2025-05-22"}  # Enable code execution
         )
     else:
@@ -101,12 +101,8 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     # Build tools list
     agent_tools = [tools]
     
-    # Add bash tool for Claude models (for code execution)
-    if model_id.startswith("claude"):
-        agent_tools.append({
-            "type": "bash_20250124",
-            "name": "bash"
-        })
+    # Note: Code execution for Claude is enabled via the default_headers in the model config
+    # It doesn't need to be added as an explicit tool
     
     # Configure agent
     agent_config = {
@@ -132,20 +128,20 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "num_history_runs": 3,
     }
     
-    # Add knowledge base if available
+    # Add vector database for knowledge if available
     if KNOWLEDGE_BASE_AVAILABLE:
         try:
-            knowledge_base = PDFKnowledgeBase(
-                path="/tmp/pricing_docs",  # Path for storing pricing documents
-                vector_db=PgVector(
-                    table_name="competitive_pricing_embeddings",
-                    db_url=db_url
-                )
+            vector_db = PgVector(
+                table_name="competitive_pricing_embeddings",
+                db_url=db_url,
+                embedder=OpenAIEmbedder(id="text-embedding-3-small")
             )
-            agent_config["knowledge_base"] = knowledge_base
-            agent_config["search_knowledge"] = True
+            agent_config["vector_db"] = vector_db
+            # Enable RAG search
+            agent_config["show_tool_calls"] = True
+            agent_config["search_top_k"] = 5
         except Exception as e:
-            print(f"Warning: Could not initialize knowledge base: {e}")
+            print(f"Warning: Could not initialize vector database: {e}")
     
     return Agent(**agent_config)
 
