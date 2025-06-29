@@ -135,10 +135,10 @@ class CompetitorPricingTools(Toolkit):
                 product_id = result.fetchone()[0]
                 session.commit()
                 
-                return f"✅ Added product to tracking: {brand} {name} (ID: {product_id})"
+                return f"Added product to tracking: {brand} {name} (ID: {product_id})"
                 
         except Exception as e:
-            return f"❌ Error adding product: {str(e)}"
+            return f"Error adding product: {str(e)}"
     
     async def add_competitor(self, name: str, urls: List[str], metadata: Optional[Dict[str, Any]] = None) -> str:
         """
@@ -169,10 +169,10 @@ class CompetitorPricingTools(Toolkit):
                 competitor_id = result.fetchone()[0]
                 session.commit()
                 
-                return f"✅ Added competitor: {name} with {len(urls)} URL(s) (ID: {competitor_id})"
+                return f"Added competitor: {name} with {len(urls)} URL(s) (ID: {competitor_id})"
                 
         except Exception as e:
-            return f"❌ Error adding competitor: {str(e)}"
+            return f"Error adding competitor: {str(e)}"
     
     async def delete_competitor(self, name: str) -> str:
         """
@@ -193,7 +193,7 @@ class CompetitorPricingTools(Toolkit):
                 
                 competitor = result.fetchone()
                 if not competitor:
-                    return f"❌ Competitor '{name}' not found"
+                    return f"Competitor '{name}' not found"
                 
                 competitor_id = competitor[0]
                 
@@ -208,10 +208,10 @@ class CompetitorPricingTools(Toolkit):
                 """), {"competitor_id": competitor_id})
                 
                 session.commit()
-                return f"✅ Deleted competitor '{name}' and all associated price history"
+                return f"Deleted competitor '{name}' and all associated price history"
                 
         except Exception as e:
-            return f"❌ Error deleting competitor: {str(e)}"
+            return f"Error deleting competitor: {str(e)}"
     
     async def modify_competitor_urls(self, name: str, urls: List[str]) -> str:
         """
@@ -233,7 +233,7 @@ class CompetitorPricingTools(Toolkit):
                 
                 competitor = result.fetchone()
                 if not competitor:
-                    return f"❌ Competitor '{name}' not found"
+                    return f"Competitor '{name}' not found"
                 
                 # Update URLs
                 session.execute(text("""
@@ -246,10 +246,10 @@ class CompetitorPricingTools(Toolkit):
                 })
                 
                 session.commit()
-                return f"✅ Updated URLs for '{name}' to: {', '.join(urls)}"
+                return f"Updated URLs for '{name}' to: {', '.join(urls)}"
                 
         except Exception as e:
-            return f"❌ Error updating competitor URLs: {str(e)}"
+            return f"Error updating competitor URLs: {str(e)}"
     
     async def delete_product(self, name: str, brand: str) -> str:
         """
@@ -272,7 +272,7 @@ class CompetitorPricingTools(Toolkit):
                 
                 product = result.fetchone()
                 if not product:
-                    return f"❌ Product '{brand} {name}' not found"
+                    return f"Product '{brand} {name}' not found"
                 
                 product_id = product[0]
                 
@@ -287,10 +287,10 @@ class CompetitorPricingTools(Toolkit):
                 """), {"product_id": product_id})
                 
                 session.commit()
-                return f"✅ Deleted product '{brand} {name}' and all associated price history"
+                return f"Deleted product '{brand} {name}' and all associated price history"
                 
         except Exception as e:
-            return f"❌ Error deleting product: {str(e)}"
+            return f"Error deleting product: {str(e)}"
     
     async def list_competitors(self) -> str:
         """
@@ -310,11 +310,11 @@ class CompetitorPricingTools(Toolkit):
                 competitors = result.fetchall()
                 
                 if not competitors:
-                    return "📋 No competitors tracked yet"
+                    return "No competitors tracked yet"
                 
-                output = "📋 **Tracked Competitors:**\n\n"
+                output = "**Tracked Competitors:**\n\n"
                 for name, urls, enabled, created_at in competitors:
-                    status = "✅ Active" if enabled else "❌ Disabled"
+                    status = "Active" if enabled else "Disabled"
                     output += f"• **{name}** - {status}\n"
                     output += f"  URLs: {', '.join(urls)}\n"
                     output += f"  Added: {created_at.strftime('%Y-%m-%d')}\n\n"
@@ -322,7 +322,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error listing competitors: {str(e)}"
+            return f"Error listing competitors: {str(e)}"
     
     async def list_products(self) -> str:
         """
@@ -355,11 +355,11 @@ class CompetitorPricingTools(Toolkit):
                 products = result.fetchall()
                 
                 if not products:
-                    return "📦 No products tracked yet"
+                    return " No products tracked yet"
                 
-                output = "📦 **Tracked Products:**\n\n"
+                output = " **Tracked Products:**\n\n"
                 for name, brand, category, enabled, created_at in products:
-                    status = "✅ Active" if enabled else "❌ Disabled"
+                    status = "Active" if enabled else "Disabled"
                     cat_text = f" ({category})" if category else ""
                     output += f"• **{brand} {name}**{cat_text}"
                     if has_enabled:
@@ -369,7 +369,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error listing products: {str(e)}"
+            return f"Error listing products: {str(e)}"
     
     async def analyze_price_freshness(self, product_name: Optional[str] = None, 
                                      brand: Optional[str] = None,
@@ -468,29 +468,29 @@ class CompetitorPricingTools(Toolkit):
                     data = result.fetchall()
                 
                 if not data:
-                    return "📊 No price data found for the specified criteria"
+                    return "No price data found for the specified criteria"
                 
                 # Categorize by freshness
                 fresh_count = sum(1 for row in data if row[6] == 'fresh')
                 stale_count = sum(1 for row in data if row[6] == 'stale')
                 old_count = sum(1 for row in data if row[6] == 'old')
                 
-                output = "📊 **Price Data Freshness Analysis**\n\n"
+                output = "**Price Data Freshness Analysis**\n\n"
                 
                 # Summary
                 output += f"**Summary:**\n"
                 output += f"- Total price points: {len(data)}\n"
-                output += f"- 🟢 Fresh (<12h): {fresh_count} ({fresh_count/len(data)*100:.1f}%)\n"
-                output += f"- 🟡 Stale (12-24h): {stale_count} ({stale_count/len(data)*100:.1f}%)\n"
-                output += f"- 🔴 Old (>24h): {old_count} ({old_count/len(data)*100:.1f}%)\n\n"
+                output += f"- Fresh (<12h): {fresh_count} ({fresh_count/len(data)*100:.1f}%)\n"
+                output += f"- Stale (12-24h): {stale_count} ({stale_count/len(data)*100:.1f}%)\n"
+                output += f"- Old (>24h): {old_count} ({old_count/len(data)*100:.1f}%)\n\n"
                 
                 # Recommendations
                 if old_count > 0:
-                    output += f"**⚠️ Recommendation:** {old_count} price points need updating (>24h old)\n\n"
+                    output += f"**Recommendation:** {old_count} price points need updating (>24h old)\n\n"
                 elif stale_count > len(data) * 0.5:
-                    output += f"**💡 Suggestion:** Consider refreshing {stale_count} stale price points\n\n"
+                    output += f"**Suggestion:** Consider refreshing {stale_count} stale price points\n\n"
                 else:
-                    output += "**✅ Status:** Most price data is fresh\n\n"
+                    output += "**Status:** Most price data is fresh\n\n"
                 
                 # Detailed breakdown
                 output += "**Detailed Breakdown:**\n\n"
@@ -510,7 +510,7 @@ class CompetitorPricingTools(Toolkit):
                         comp_name = row[2]
                         price = f"${row[3]:.2f}" if row[3] else "N/A"
                         hours = row[5]
-                        status_icon = {"fresh": "🟢", "stale": "🟡", "old": "🔴"}.get(row[6], "❓")
+                        status_icon = {"fresh": "", "stale": "", "old": ""}.get(row[6], "")
                         avail = row[7]
                         
                         if hours < 1:
@@ -528,7 +528,7 @@ class CompetitorPricingTools(Toolkit):
                 # Quick refresh suggestions
                 old_items = [row for row in data if row[6] == 'old']
                 if old_items:
-                    output += "**🔄 Quick Refresh Needed:**\n"
+                    output += "**Quick Refresh Needed:**\n"
                     for row in old_items[:5]:  # Show first 5
                         output += f"- {row[1]} {row[0]} at {row[2]}\n"
                     if len(old_items) > 5:
@@ -539,8 +539,8 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             # Check if materialized view exists
             if "latest_prices" in str(e):
-                return "❌ Freshness analysis not available. Database views may need to be created."
-            return f"❌ Error analyzing freshness: {str(e)}"
+                return "Freshness analysis not available. Database views may need to be created."
+            return f"Error analyzing freshness: {str(e)}"
     
     async def check_prices(self, product_name: str, brand: Optional[str] = None, 
                           competitor_names: Optional[List[str]] = None, force_refresh: bool = False) -> str:
@@ -599,19 +599,19 @@ class CompetitorPricingTools(Toolkit):
                         
                         if variants:
                             # Show available variants
-                            output = f"❌ Exact product '{product_name}' not found.\n\n"
-                            output += f"📋 **Available {brand} variants containing '{base_product}':**\n"
+                            output = f"Exact product '{product_name}' not found.\n\n"
+                            output += f"**Available {brand} variants containing '{base_product}':**\n"
                             for _, var_name, var_brand, _ in variants:
                                 output += f"• {var_brand} {var_name}\n"
                             
-                            output += f"\n💡 **Tip:** Search for a specific variant from the list above for accurate pricing."
-                            output += f"\n\n🔍 **Showing prices for all {base_product} variants:**\n"
+                            output += f"\n**Tip:** Search for a specific variant from the list above for accurate pricing."
+                            output += f"\n\n**Showing prices for all {base_product} variants:**\n"
                             
                             # Set products to all variants for price checking
                             products = variants
                 
                 if not products:
-                    return f"❌ Product not found: {product_name}"
+                    return f"Product not found: {product_name}"
                 
                 # Get competitors
                 comp_query = "SELECT id, name, urls FROM pricing.competitors WHERE enabled = true"
@@ -753,16 +753,16 @@ class CompetitorPricingTools(Toolkit):
                 
                 # Add refresh suggestions if needed
                 if needs_refresh and not force_refresh:
-                    output += "\n💡 **Freshness Notice:**\n"
+                    output += "\n**Freshness Notice:**\n"
                     stale_count = sum(1 for r in results if r.get('freshness') == 'stale')
                     if stale_count > 0:
-                        output += f"- {stale_count} price points are 12-24 hours old (marked with 🟡)\n"
+                        output += f"- {stale_count} price points are 12-24 hours old (marked with )\n"
                         output += "- Use `force_refresh=True` to update all prices\n"
                 
                 return output
                 
         except Exception as e:
-            return f"❌ Error checking prices: {str(e)}"
+            return f"Error checking prices: {str(e)}"
     
     async def bulk_price_check(self, products: List[Dict[str, str]], 
                               competitors: Optional[List[str]] = None) -> str:
@@ -815,7 +815,7 @@ class CompetitorPricingTools(Toolkit):
                 product = result.fetchone()
                 
                 if not product:
-                    return f"❌ Product not found: {product_name}"
+                    return f"Product not found: {product_name}"
                 
                 product_id, prod_name, prod_brand = product
                 
@@ -867,7 +867,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error getting price history: {str(e)}"
+            return f"Error getting price history: {str(e)}"
     
     async def analyze_pricing_trends(self, category: str = None, days: int = 7) -> str:
         """
@@ -946,7 +946,7 @@ class CompetitorPricingTools(Toolkit):
                     
                     for trend in significant[:10]:  # Top 10
                         brand, name, cat, comp, curr, prev, _, _, _, _, pct = trend
-                        arrow = "📈" if pct > 0 else "📉"
+                        arrow = "" if pct > 0 else ""
                         output += f"| {brand} {name} | {comp} | ${prev:.2f} | ${curr:.2f} | {arrow} {pct:.1f}% |\n"
                 else:
                     output += "No significant price changes detected.\n"
@@ -964,7 +964,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error analyzing trends: {str(e)}"
+            return f"Error analyzing trends: {str(e)}"
     
     async def discover_product_variants(self, base_product: str, brand: str) -> str:
         """
@@ -1002,7 +1002,7 @@ class CompetitorPricingTools(Toolkit):
                 if not variants:
                     return f"No {brand} {base_product} variants found in the system."
                 
-                output = f"## 🔍 {brand} {base_product} Variants Discovery\n\n"
+                output = f"## {brand} {base_product} Variants Discovery\n\n"
                 output += f"Found {len(variants)} variants:\n\n"
                 
                 for name, _, comp_count, last_seen in variants:
@@ -1013,12 +1013,12 @@ class CompetitorPricingTools(Toolkit):
                         output += f"  - Last price data: {int(hours_ago)} hours ago\n"
                     output += "\n"
                 
-                output += f"\n💡 **Tip:** Use 'check prices for [specific variant]' to see current pricing."
+                output += f"\n**Tip:** Use 'check prices for [specific variant]' to see current pricing."
                 
                 return output
                 
         except Exception as e:
-            return f"❌ Error discovering variants: {str(e)}"
+            return f"Error discovering variants: {str(e)}"
     
     async def search_product_urls(self, product_name: str, brand: str, 
                                  competitor_url: str) -> List[str]:
@@ -1279,7 +1279,7 @@ class CompetitorPricingTools(Toolkit):
                 by_product[prod] = []
             by_product[prod].append(result)
         
-        output = "## 💰 Competitive Pricing Report\n\n"
+        output = "##  Competitive Pricing Report\n\n"
         
         for product, data in by_product.items():
             output += f"### {product}\n\n"
@@ -1295,10 +1295,10 @@ class CompetitorPricingTools(Toolkit):
                 
                 # Status emoji
                 status_emoji = {
-                    "in_stock": "✅",
-                    "out_of_stock": "⚠️",
-                    "not_carried": "❌"
-                }.get(item['status'], "❓")
+                    "in_stock": "",
+                    "out_of_stock": "",
+                    "not_carried": ""
+                }.get(item['status'], "")
                 
                 status = f"{status_emoji} {item['status'].replace('_', ' ').title()}"
                 
@@ -1318,12 +1318,12 @@ class CompetitorPricingTools(Toolkit):
                         time_str = f"{int(hours_ago/24)} days ago"
                     
                     if item.get('from_cache'):
-                        time_str += " 📦"
+                        time_str += " "
                 else:
                     time_str = "Unknown"
                 
                 # Source
-                source = "🔄 Fresh" if not item.get('from_cache') else "💾 Cached"
+                source = "Fresh" if not item.get('from_cache') else " Cached"
                 
                 output += f"| {item['competitor']} | {price} | {member} | {status} | {time_str} | {source} |\n"
             
@@ -1331,18 +1331,18 @@ class CompetitorPricingTools(Toolkit):
             available_prices = [d['price'] for d in data if d.get('price') and d['status'] == 'in_stock']
             if available_prices:
                 output += f"\n**Insights:**\n"
-                output += f"- 🏆 Best price: ${min(available_prices):.2f} at {data[0]['competitor']}\n"
-                output += f"- 📊 Average price: ${sum(available_prices)/len(available_prices):.2f}\n"
-                output += f"- 📈 Price range: ${min(available_prices):.2f} - ${max(available_prices):.2f}\n"
+                output += f"-  Best price: ${min(available_prices):.2f} at {data[0]['competitor']}\n"
+                output += f"- Average price: ${sum(available_prices)/len(available_prices):.2f}\n"
+                output += f"-  Price range: ${min(available_prices):.2f} - ${max(available_prices):.2f}\n"
                 
                 # Out of stock warnings
                 out_of_stock = [d['competitor'] for d in data if d['status'] == 'out_of_stock']
                 if out_of_stock:
-                    output += f"- ⚠️ Out of stock at: {', '.join(out_of_stock)}\n"
+                    output += f"- Out of stock at: {', '.join(out_of_stock)}\n"
                 
                 not_carried = [d['competitor'] for d in data if d['status'] == 'not_carried']
                 if not_carried:
-                    output += f"- ❌ Not carried by: {', '.join(not_carried)}\n"
+                    output += f"- Not carried by: {', '.join(not_carried)}\n"
             
             output += "\n"
         
@@ -1397,7 +1397,7 @@ class CompetitorPricingTools(Toolkit):
                 by_product[prod] = []
             by_product[prod].append(result)
         
-        output = "## 💰 Competitive Pricing Report\n\n"
+        output = "##  Competitive Pricing Report\n\n"
         
         for product, data in by_product.items():
             output += f"### {product}\n\n"
@@ -1413,21 +1413,21 @@ class CompetitorPricingTools(Toolkit):
                 
                 # Status emoji
                 status_emoji = {
-                    "in_stock": "✅",
-                    "out_of_stock": "⚠️",
-                    "not_carried": "❌"
-                }.get(item['status'], "❓")
+                    "in_stock": "",
+                    "out_of_stock": "",
+                    "not_carried": ""
+                }.get(item['status'], "")
                 
                 status = f"{status_emoji} {item['status'].replace('_', ' ').title()}"
                 
                 # Freshness indicator
                 freshness = item.get('freshness', 'unknown')
                 freshness_icon = {
-                    "fresh": "🟢",
-                    "stale": "🟡", 
-                    "old": "🔴",
-                    "unknown": "❓"
-                }.get(freshness, "❓")
+                    "fresh": "",
+                    "stale": "", 
+                    "old": "",
+                    "unknown": ""
+                }.get(freshness, "")
                 
                 # Time since update
                 hours_old = item.get('hours_old', 0)
@@ -1444,9 +1444,9 @@ class CompetitorPricingTools(Toolkit):
             available_prices = [d['price'] for d in data if d.get('price') and d['status'] == 'in_stock']
             if available_prices:
                 output += f"\n**Insights:**\n"
-                output += f"- 🏆 Best price: ${min(available_prices):.2f} at {[d['competitor'] for d in data if d['price'] == min(available_prices)][0]}\n"
-                output += f"- 📊 Average price: ${sum(available_prices)/len(available_prices):.2f}\n"
-                output += f"- 📈 Price range: ${min(available_prices):.2f} - ${max(available_prices):.2f}\n"
+                output += f"-  Best price: ${min(available_prices):.2f} at {[d['competitor'] for d in data if d['price'] == min(available_prices)][0]}\n"
+                output += f"- Average price: ${sum(available_prices)/len(available_prices):.2f}\n"
+                output += f"-  Price range: ${min(available_prices):.2f} - ${max(available_prices):.2f}\n"
                 
                 # Freshness summary
                 fresh_count = sum(1 for d in data if d.get('freshness') == 'fresh')
@@ -1454,20 +1454,20 @@ class CompetitorPricingTools(Toolkit):
                 old_count = sum(1 for d in data if d.get('freshness') == 'old')
                 
                 if fresh_count > 0:
-                    output += f"- 🟢 Fresh data: {fresh_count} competitors\n"
+                    output += f"- Fresh data: {fresh_count} competitors\n"
                 if stale_count > 0:
-                    output += f"- 🟡 Stale data (12-24h): {stale_count} competitors\n"
+                    output += f"- Stale data (12-24h): {stale_count} competitors\n"
                 if old_count > 0:
-                    output += f"- 🔴 Old data (>24h): {old_count} competitors\n"
+                    output += f"- Old data (>24h): {old_count} competitors\n"
                 
                 # Out of stock warnings
                 out_of_stock = [d['competitor'] for d in data if d['status'] == 'out_of_stock']
                 if out_of_stock:
-                    output += f"- ⚠️ Out of stock at: {', '.join(out_of_stock)}\n"
+                    output += f"- Out of stock at: {', '.join(out_of_stock)}\n"
                 
                 not_carried = [d['competitor'] for d in data if d['status'] == 'not_carried']
                 if not_carried:
-                    output += f"- ❌ Not carried by: {', '.join(not_carried)}\n"
+                    output += f"- Not carried by: {', '.join(not_carried)}\n"
             
             output += "\n"
         
@@ -1493,13 +1493,13 @@ class CompetitorPricingTools(Toolkit):
             with self.Session() as session:
                 # Validate products
                 if not products:
-                    return "❌ No products specified for batch job"
+                    return "No products specified for batch job"
                 
                 # Get all product IDs
                 product_ids = []
                 for prod in products:
                     if 'name' not in prod or 'brand' not in prod:
-                        return "❌ Each product must have 'name' and 'brand' fields"
+                        return "Each product must have 'name' and 'brand' fields"
                     
                     result = session.execute(text("""
                         SELECT id FROM pricing.products 
@@ -1543,7 +1543,7 @@ class CompetitorPricingTools(Toolkit):
                 competitor_ids = [row[0] for row in comp_result]
                 
                 if not competitor_ids:
-                    return "❌ No active competitors found"
+                    return "No active competitors found"
                 
                 # Calculate total checks
                 total_checks = len(product_ids) * len(competitor_ids)
@@ -1551,7 +1551,7 @@ class CompetitorPricingTools(Toolkit):
                 # Prompt for confirmation if large job
                 if total_checks > 50:
                     estimated_time = (total_checks * 2) / 60  # ~2 seconds per check
-                    confirmation = f"⚠️ This will create {total_checks} price checks (~{estimated_time:.1f} minutes). "
+                    confirmation = f"This will create {total_checks} price checks (~{estimated_time:.1f} minutes). "
                     
                     # Check how many already have fresh data
                     fresh_result = session.execute(text("""
@@ -1565,9 +1565,9 @@ class CompetitorPricingTools(Toolkit):
                     stale_count = total_checks - fresh_count
                     
                     if fresh_count > 0:
-                        confirmation += f"\n\n📊 Cache Status:\n"
-                        confirmation += f"- 🟢 Fresh data: {fresh_count} price points\n"
-                        confirmation += f"- 🔴 Needs update: {stale_count} price points\n"
+                        confirmation += f"\n\nCache Status:\n"
+                        confirmation += f"- Fresh data: {fresh_count} price points\n"
+                        confirmation += f"- Needs update: {stale_count} price points\n"
                         confirmation += f"\nConsider checking only stale prices to save time."
                     
                     return confirmation + "\n\nTo proceed, call create_batch_job again with confirm=True"
@@ -1607,7 +1607,7 @@ class CompetitorPricingTools(Toolkit):
                 session.commit()
                 
                 # Return confirmation
-                output = f"✅ **Batch Job Created**\n\n"
+                output = f"**Batch Job Created**\n\n"
                 output += f"- Job ID: `{job_id}`\n"
                 output += f"- Total checks: {total_checks}\n"
                 output += f"- Products: {len(product_ids)}\n"
@@ -1618,7 +1618,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error creating batch job: {str(e)}"
+            return f"Error creating batch job: {str(e)}"
     
     async def check_batch_status(self, job_id: str) -> str:
         """
@@ -1642,7 +1642,7 @@ class CompetitorPricingTools(Toolkit):
                 
                 job = result.fetchone()
                 if not job:
-                    return f"❌ Batch job not found: {job_id}"
+                    return f"Batch job not found: {job_id}"
                 
                 name, status, total, completed, created, started, finished, error = job
                 
@@ -1651,12 +1651,12 @@ class CompetitorPricingTools(Toolkit):
                 
                 # Status emoji
                 status_emoji = {
-                    "pending": "⏳",
-                    "running": "🔄",
-                    "completed": "✅",
-                    "failed": "❌",
-                    "cancelled": "🚫"
-                }.get(status, "❓")
+                    "pending": "",
+                    "running": "",
+                    "completed": "",
+                    "failed": "",
+                    "cancelled": ""
+                }.get(status, "")
                 
                 output = f"## {status_emoji} Batch Job Status\n\n"
                 output += f"**{name}**\n\n"
@@ -1666,7 +1666,7 @@ class CompetitorPricingTools(Toolkit):
                 # Progress bar
                 bar_length = 20
                 filled = int(bar_length * progress / 100)
-                bar = "█" * filled + "░" * (bar_length - filled)
+                bar = "" * filled + "" * (bar_length - filled)
                 output += f"- [{bar}]\n\n"
                 
                 # Timing info
@@ -1684,7 +1684,7 @@ class CompetitorPricingTools(Toolkit):
                     output += f"- Completed: {finished.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
                 
                 if error:
-                    output += f"\n⚠️ Error: {error}\n"
+                    output += f"\nError: {error}\n"
                 
                 # Get breakdown by status
                 if status in ["running", "completed"]:
@@ -1700,12 +1700,12 @@ class CompetitorPricingTools(Toolkit):
                         output += f"- {item_status.title()}: {count}\n"
                 
                 if status == "completed":
-                    output += f"\n✅ Job complete! Use `get_batch_results('{job_id}')` to retrieve results."
+                    output += f"\nJob complete! Use `get_batch_results('{job_id}')` to retrieve results."
                 
                 return output
                 
         except Exception as e:
-            return f"❌ Error checking batch status: {str(e)}"
+            return f"Error checking batch status: {str(e)}"
     
     async def get_batch_results(self, job_id: str, format: str = "summary") -> str:
         """
@@ -1727,10 +1727,10 @@ class CompetitorPricingTools(Toolkit):
                 
                 job = result.fetchone()
                 if not job:
-                    return f"❌ Batch job not found: {job_id}"
+                    return f"Batch job not found: {job_id}"
                 
                 if job[0] != "completed":
-                    return f"❌ Job is not completed yet. Status: {job[0]}"
+                    return f"Job is not completed yet. Status: {job[0]}"
                 
                 # Get all results
                 results = session.execute(text("""
@@ -1775,7 +1775,7 @@ class CompetitorPricingTools(Toolkit):
                     csv_content = output.getvalue()
                     
                     # In a real implementation, save to S3/blob storage and return URL
-                    return f"📄 CSV generated with {len(data)} rows.\n\n[Download would be available in production]"
+                    return f" CSV generated with {len(data)} rows.\n\n[Download would be available in production]"
                 
                 elif format == "detailed":
                     # Detailed format - reuse existing formatting
@@ -1805,7 +1805,7 @@ class CompetitorPricingTools(Toolkit):
                             by_product[key] = []
                         by_product[key].append(row)
                     
-                    output = f"## 📊 Batch Job Results Summary\n\n"
+                    output = f"## Batch Job Results Summary\n\n"
                     output += f"Job ID: `{job_id}`\n"
                     output += f"Products analyzed: {len(by_product)}\n\n"
                     
@@ -1824,7 +1824,7 @@ class CompetitorPricingTools(Toolkit):
                     return output
                 
         except Exception as e:
-            return f"❌ Error getting batch results: {str(e)}"
+            return f"Error getting batch results: {str(e)}"
     
     async def list_batch_jobs(self, user_id: Optional[str] = None, limit: int = 10) -> str:
         """
@@ -1852,21 +1852,21 @@ class CompetitorPricingTools(Toolkit):
                 jobs = result.fetchall()
                 
                 if not jobs:
-                    return "📋 No batch jobs found"
+                    return "No batch jobs found"
                 
-                output = "## 📋 Recent Batch Jobs\n\n"
+                output = "## Recent Batch Jobs\n\n"
                 
                 for job in jobs:
                     job_id, name, status, total, completed, created, creator = job
                     
                     # Status emoji
                     status_emoji = {
-                        "pending": "⏳",
-                        "running": "🔄",
-                        "completed": "✅",
-                        "failed": "❌",
-                        "cancelled": "🚫"
-                    }.get(status, "❓")
+                        "pending": "",
+                        "running": "",
+                        "completed": "",
+                        "failed": "",
+                        "cancelled": ""
+                    }.get(status, "")
                     
                     progress = (completed / total * 100) if total > 0 else 0
                     
@@ -1880,7 +1880,7 @@ class CompetitorPricingTools(Toolkit):
                 return output
                 
         except Exception as e:
-            return f"❌ Error listing batch jobs: {str(e)}"
+            return f"Error listing batch jobs: {str(e)}"
 
 
 def get_competitive_pricing_agent(
@@ -1957,9 +1957,9 @@ def get_competitive_pricing_agent(
                - Force refresh with force_refresh=True parameter
                - Track regular and member pricing tiers
                - Data freshness indicators:
-                 * 🟢 Fresh: < 12 hours old (used automatically)
-                 * 🟡 Stale: 12-24 hours old (used but flagged)
-                 * 🔴 Old: > 24 hours old (auto-refreshed)
+                 * Fresh: < 12 hours old (used automatically)
+                 * Stale: 12-24 hours old (used but flagged)
+                 * Old: > 24 hours old (auto-refreshed)
             
             4. **Analysis & Insights**
                - Use `get_price_history` for trend data

@@ -149,7 +149,7 @@ class EnhancedCompetitorPricingTools(CompetitorPricingTools):
                 competitor = competitor_result.fetchone()
                 
                 if not product or not competitor:
-                    return "❌ Product or competitor not found"
+                    return " Product or competitor not found"
                 
                 # Calculate confidence impact based on correction type
                 confidence_impact = {
@@ -200,7 +200,7 @@ class EnhancedCompetitorPricingTools(CompetitorPricingTools):
                 
                 session.commit()
                 
-                return f"""✅ Correction recorded successfully!
+                return f""" Correction recorded successfully!
                 
 **Details:**
 - Product: {product_name}
@@ -213,7 +213,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 
         except Exception as e:
             logger.error(f"Error recording correction: {e}")
-            return f"❌ Error recording correction: {str(e)}"
+            return f" Error recording correction: {str(e)}"
     
     async def view_scraping_confidence(
         self,
@@ -270,7 +270,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 if not data:
                     return f"No scraping data found for the last {days} days"
                 
-                output = f"## 📊 Scraping Confidence Report\n"
+                output = f"##  Scraping Confidence Report\n"
                 output += f"*Last {days} days*\n\n"
                 
                 # Group by competitor
@@ -291,7 +291,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                         success_rate = (success / total * 100) if total > 0 else 0
                         
                         # Confidence emoji
-                        conf_emoji = "🟢" if avg_conf >= 0.7 else "🟡" if avg_conf >= 0.4 else "🔴"
+                        conf_emoji = "" if avg_conf >= 0.7 else "" if avg_conf >= 0.4 else ""
                         
                         output += f"| {product[:30]}... | {tool} | {conf_emoji} {avg_conf:.2f} | "
                         output += f"{success_rate:.0f}% ({success}/{total}) | "
@@ -314,7 +314,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 
                 corrections = corrections_result.fetchall()
                 if corrections:
-                    output += "### 📝 User Corrections\n\n"
+                    output += "###  User Corrections\n\n"
                     output += "| Competitor | Type | Count |\n"
                     output += "|------------|------|-------|\n"
                     
@@ -325,7 +325,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 
         except Exception as e:
             logger.error(f"Error viewing confidence: {e}")
-            return f"❌ Error viewing confidence metrics: {str(e)}"
+            return f" Error viewing confidence metrics: {str(e)}"
     
     async def analyze_scraping_performance(
         self,
@@ -371,10 +371,10 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 result = session.execute(text(query), params)
                 low_confidence = result.fetchall()
                 
-                output = f"## 🔍 Scraping Performance Analysis\n\n"
+                output = f"##  Scraping Performance Analysis\n\n"
                 
                 if low_confidence:
-                    output += f"### ⚠️ Low Confidence Scrapes (< {min_confidence:.0%})\n\n"
+                    output += f"###  Low Confidence Scrapes (< {min_confidence:.0%})\n\n"
                     output += "| Competitor | Product | URL | Tool | Confidence | Issues |\n"
                     output += "|------------|---------|-----|------|------------|--------|\n"
                     
@@ -407,7 +407,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                     ORDER BY tool_used, success_rate DESC
                 """))
                 
-                output += "\n### 📊 Tool Performance by Competitor\n\n"
+                output += "\n###  Tool Performance by Competitor\n\n"
                 
                 current_tool = None
                 for row in tool_stats:
@@ -423,7 +423,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                     output += f"{avg_time:.0f}ms | {attempts} |\n"
                 
                 # Recommendations
-                output += "\n### 💡 Recommendations\n\n"
+                output += "\n###  Recommendations\n\n"
                 
                 # Check for competitors with consistently low performance
                 poor_performers = session.execute(text("""
@@ -467,7 +467,7 @@ This will help improve future scraping accuracy. Thank you for the feedback!"""
                 
         except Exception as e:
             logger.error(f"Error analyzing performance: {e}")
-            return f"❌ Error analyzing scraping performance: {str(e)}"
+            return f" Error analyzing scraping performance: {str(e)}"
     
     def _save_price_history_enhanced(
         self, 
@@ -537,9 +537,9 @@ def create_enhanced_agent() -> Agent:
        - URL structures that work for each competitor
     
     3. **Confidence Reporting**: When showing prices, indicate confidence levels:
-       - 🟢 High confidence (>70%): Highly reliable data
-       - 🟡 Medium confidence (40-70%): Generally reliable but verify if critical
-       - 🔴 Low confidence (<40%): Data may be unreliable, manual verification recommended
+       -  High confidence (>70%): Highly reliable data
+       -  Medium confidence (40-70%): Generally reliable but verify if critical
+       -  Low confidence (<40%): Data may be unreliable, manual verification recommended
     
     4. **User Corrections**: When users correct you, use the `record_user_correction` tool to improve future accuracy.
     

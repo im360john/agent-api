@@ -202,6 +202,18 @@ CHAT_HTML = """
             text-align: left;
         }
         
+        .message-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            list-style-position: inside;
+        }
+        
+        .message-content li {
+            margin: 5px 0;
+            text-indent: -20px;
+            padding-left: 20px;
+        }
+        
         .message.user .message-content {
             background-color: #2E7D32;
             color: white;
@@ -315,32 +327,32 @@ CHAT_HTML = """
 <body>
     <div class="container">
         <div class="sidebar">
-            <h2>💰 Quick Actions</h2>
+            <h2>Quick Actions</h2>
             <div class="quick-actions">
                 <button class="action-button" onclick="sendQuickAction('check prices for all tracked products')">
-                    📊 Check All Prices
+                    Check All Prices
                 </button>
                 <button class="action-button" onclick="sendQuickAction('list all competitors')">
-                    🏪 View Competitors
+                    View Competitors
                 </button>
                 <button class="action-button" onclick="sendQuickAction('list all tracked products')">
-                    📦 Tracked Products
+                    Tracked Products
                 </button>
                 <button class="action-button" onclick="sendQuickAction('help me add a new product to track')">
-                    ➕ Track New Product
+                    Track New Product
                 </button>
                 <button class="action-button" onclick="sendQuickAction('analyze pricing trends for the last 7 days')">
-                    📉 Price Trends
+                    Price Trends
                 </button>
                 <button class="action-button" onclick="sendQuickAction('get price history for Wyld products')">
-                    📈 Price History
+                    Price History
                 </button>
                 <button class="action-button" onclick="sendQuickAction('create a batch job to check all prices')">
-                    🔄 Batch Check
+                    Batch Check
                 </button>
             </div>
             
-            <h2>📝 Examples</h2>
+            <h2>Examples</h2>
             <div style="font-size: 14px; opacity: 0.9;">
                 <p style="margin-bottom: 10px;">• "Check prices for Wyld Gummies"</p>
                 <p style="margin-bottom: 10px;">• "Add competitor: Example Dispensary"</p>
@@ -358,15 +370,22 @@ CHAT_HTML = """
             <div class="chat-container" id="chatContainer">
                 <div class="message assistant">
                     <div class="message-content">
-                        <p>👋 Welcome to the Competitive Pricing Assistant!</p>
+                        <p>Welcome to the Competitive Pricing Assistant!</p>
                         <p>I can help you:</p>
                         <ul>
-                            <li>🔍 <strong>Check prices</strong> across all competitors</li>
-                            <li>📊 <strong>Track products</strong> and monitor changes</li>
-                            <li>📈 <strong>Analyze trends</strong> and price history</li>
-                            <li>🔄 <strong>Create batch jobs</strong> for bulk price checking</li>
+                            <li><strong>Check prices</strong> across all competitors</li>
+                            <li><strong>Track products</strong> and monitor changes</li>
+                            <li><strong>Analyze trends</strong> and price history</li>
+                            <li><strong>Create batch jobs</strong> for bulk price checking</li>
                         </ul>
-                        <p>Try the quick actions on the left or type your own query!</p>
+                        <p style="margin-top: 10px;"><strong>How to use:</strong></p>
+                        <p>Just ask for prices! I'll automatically track new products and fetch current prices. For example:</p>
+                        <ul>
+                            <li>"Get prices for Wyld Sour Apple Sativa"</li>
+                            <li>"Check prices for all Kiva products"</li>
+                            <li>"Show me Camino gummies prices at Harborside"</li>
+                        </ul>
+                        <p style="margin-top: 10px;">Try the quick actions on the left or type your own query!</p>
                     </div>
                 </div>
             </div>
@@ -555,7 +574,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.send_message(
                         json.dumps({
                             "type": "response",
-                            "content": f"❌ Error: {str(e)}\n\nPlease try rephrasing your request."
+                            "content": f"Error: {str(e)}\n\nPlease try rephrasing your request."
                         }),
                         client_id
                     )
