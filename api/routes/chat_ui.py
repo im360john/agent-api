@@ -527,9 +527,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     # Run agent in a thread pool to avoid blocking
                     import asyncio
-                    response = await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        lambda: agent.run(message, user_id=client_id, session_id=client_id)
+                    # Use async run method since our tools are async
+                    response = await agent.arun(
+                        message,
+                        user_id=client_id,
+                        session_id=client_id
                     )
                     
                     # Send response

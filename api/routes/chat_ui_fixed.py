@@ -532,8 +532,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run agent with proper error handling
                 try:
-                    # Use run method with correct signature
-                    response = agent.run(
+                    # Use async run method since our tools are async
+                    response = await agent.arun(
                         message,
                         user_id=client_id,
                         session_id=client_id

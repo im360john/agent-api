@@ -27,9 +27,11 @@ async def test_agent():
         
         # Test running
         import asyncio
-        response = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: agent.run("list all competitors", user_id="test_user", session_id="test_session")
+        # Use async run method since our tools are async
+        response = await agent.arun(
+            "list all competitors",
+            user_id="test_user",
+            session_id="test_session"
         )
         
         return {
