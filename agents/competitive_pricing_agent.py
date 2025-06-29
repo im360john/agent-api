@@ -557,20 +557,55 @@ class CompetitorPricingTools(Toolkit):
             Formatted price comparison with freshness indicators
         """
         try:
+            # Extract brand from product name if not provided separately
+            known_brands = ['wyld', 'kiva', 'camino', 'plus', 'wana', 'jetty', 'stiiizy']
+            detected_brand = None
+            
+            if not brand:
+                # Check if any known brand is in the product name
+                product_words = product_name.lower().split()
+                for word in product_words:
+                    if word in known_brands:
+                        detected_brand = word
+                        # Remove brand from product name for better search
+                        product_name = ' '.join([w for w in product_name.split() if w.lower() != detected_brand])
+                        break
+            
             with self.Session() as session:
                 # Find the product - first try exact match
                 query = "SELECT id, name, brand, metadata FROM pricing.products WHERE LOWER(name) LIKE :name"
                 params = {"name": f"%{product_name.lower()}%"}
                 
-                if brand:
+                if brand or detected_brand:
                     query += " AND LOWER(brand) = :brand"
-                    params["brand"] = brand.lower()
+                    params["brand"] = (brand or detected_brand).lower()
                 
                 result = session.execute(text(query), params)
                 products = result.fetchall()
                 
+                # If no exact match, try fuzzy search with all words
+                if not products:
+                    # Split search terms and create pattern that matches all words in any order
+                    search_words = product_name.lower().split()
+                    
+                    # Build query that requires all words to be present
+                    query = "SELECT id, name, brand, metadata FROM pricing.products WHERE "
+                    word_conditions = []
+                    for i, word in enumerate(search_words):
+                        word_conditions.append(f"LOWER(name) LIKE :word{i}")
+                        params[f"word{i}"] = f"%{word}%"
+                    
+                    query += " AND ".join(word_conditions)
+                    
+                    if brand or detected_brand:
+                        query += " AND LOWER(brand) = :brand"
+                        params["brand"] = (brand or detected_brand).lower()
+                    
+                    result = session.execute(text(query), params)
+                    products = result.fetchall()
+                
                 # If no exact match, try to find variants
-                if not products and brand:
+                if not products and (brand or detected_brand):
                     # Extract base product name (remove dosage, ratios, etc)
                     base_words = []
                     for word in product_name.split():
@@ -590,7 +625,7 @@ class CompetitorPricingTools(Toolkit):
                             ORDER BY name
                         """
                         variant_params = {
-                            "brand": brand.lower(),
+                            "brand": (brand or detected_brand).lower(),
                             "base_pattern": f"%{base_product.lower()}%"
                         }
                         
@@ -600,7 +635,7 @@ class CompetitorPricingTools(Toolkit):
                         if variants:
                             # Show available variants
                             output = f"Exact product '{product_name}' not found.\n\n"
-                            output += f"**Available {brand} variants containing '{base_product}':**\n"
+                            output += f"**Available {brand or detected_brand} variants containing '{base_product}':**\n"
                             for _, var_name, var_brand, _ in variants:
                                 output += f"• {var_brand} {var_name}\n"
                             
