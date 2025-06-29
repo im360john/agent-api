@@ -14,11 +14,8 @@ from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
 
-try:
-    from agents.competitive_pricing_agent_enhanced import EnhancedCompetitorPricingTools
-except ImportError:
-    # Fallback to regular agent if enhanced version not available
-    from agents.competitive_pricing_agent import CompetitorPricingTools as EnhancedCompetitorPricingTools
+# Use the basic tools directly
+from agents.competitive_pricing_agent import CompetitorPricingTools
 from db.session import db_url
 
 # Create router
@@ -47,11 +44,7 @@ manager = ConnectionManager()
 def create_pricing_agent() -> Agent:
     """Create the enhanced competitive pricing agent"""
     
-    try:
-        tools = EnhancedCompetitorPricingTools(db_url=db_url)
-    except Exception as e:
-        print(f"Error initializing tools: {e}")
-        raise
+    tools = CompetitorPricingTools(db_url=db_url)
     
     instructions = """You are a competitive pricing assistant for cannabis dispensaries.
 
@@ -532,28 +525,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run agent
                 try:
-                    # Handle both sync and async run methods
-                    if hasattr(agent, 'run_sync'):
-                        response = agent.run_sync(
-                            message=message,
-                            user_id=client_id,
-                            session_id=client_id
-                        )
-                    else:
-                        # For async run, we need to handle it properly
-                        import inspect
-                        if inspect.iscoroutinefunction(agent.run):
-                            response = await agent.run(
-                                message=message,
-                                user_id=client_id,
-                                session_id=client_id
-                            )
-                        else:
-                            response = agent.run(
-                                message=message,
-                                user_id=client_id,
-                                session_id=client_id
-                            )
+                    # Use run_sync for synchronous execution
+                    response = agent.run_sync(
+                        message=message,
+                        user_id=client_id,
+                        session_id=client_id
+                    )
                     
                     # Send response
                     await manager.send_message(
