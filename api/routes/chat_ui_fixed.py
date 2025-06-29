@@ -1,8 +1,7 @@
-"""Integrated Chat UI for Competitive Pricing Agent"""
+"""Fixed Chat UI for Competitive Pricing Agent"""
 
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 import json
 import asyncio
 from typing import Dict, Any
@@ -14,11 +13,8 @@ from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
 
-try:
-    from agents.competitive_pricing_agent_enhanced import EnhancedCompetitorPricingTools
-except ImportError:
-    # Fallback to regular agent if enhanced version not available
-    from agents.competitive_pricing_agent import CompetitorPricingTools as EnhancedCompetitorPricingTools
+# Import the basic tools
+from agents.competitive_pricing_agent import CompetitorPricingTools
 from db.session import db_url
 
 # Create router
@@ -45,47 +41,38 @@ manager = ConnectionManager()
 
 # Create agent instance
 def create_pricing_agent() -> Agent:
-    """Create the enhanced competitive pricing agent"""
+    """Create the competitive pricing agent"""
     
-    try:
-        tools = EnhancedCompetitorPricingTools(db_url=db_url)
-    except Exception as e:
-        print(f"Error initializing tools: {e}")
-        raise
+    tools = CompetitorPricingTools(db_url=db_url)
     
     instructions = """You are a competitive pricing assistant for cannabis dispensaries.
 
     Key features:
-    - Check prices across competitors with confidence scores (🟢 High >70%, 🟡 Medium 40-70%, 🔴 Low <40%)
+    - Check prices across competitors
     - Track products and manage competitors
-    - Learn from user corrections to improve accuracy
-    - Analyze pricing trends and scraping performance
+    - Analyze pricing trends and history
+    - Provide batch processing capabilities
     
-    Always mention confidence levels and data freshness when reporting prices.
     Format responses with clear tables and actionable insights."""
     
-    try:
-        return Agent(
-            name="competitive_pricing_chat",
-            agent_id="competitive_pricing_chat", 
-            model=OpenAIChat(id="gpt-4o"),
-            tools=tools,
-            storage=PostgresAgentStorage(
-                table_name="competitive_pricing_chat_agents", 
-                db_url=db_url
-            ),
-            memory=Memory(
-                db=PostgresMemoryDb(
-                    table_name="competitive_pricing_chat_memory",
-                    db_url=db_url,
-                )
-            ),
-            instructions=instructions,
-            markdown=True,
-        )
-    except Exception as e:
-        print(f"Error creating agent: {e}")
-        raise
+    return Agent(
+        name="competitive_pricing_chat",
+        agent_id="competitive_pricing_chat", 
+        model=OpenAIChat(id="gpt-4o"),
+        tools=tools,
+        storage=PostgresAgentStorage(
+            table_name="competitive_pricing_chat_agents", 
+            db_url=db_url
+        ),
+        memory=Memory(
+            db=PostgresMemoryDb(
+                table_name="competitive_pricing_chat_memory",
+                db_url=db_url,
+            )
+        ),
+        instructions=instructions,
+        markdown=True,
+    )
 
 # Cache agent instance
 _agent = None
@@ -301,10 +288,6 @@ CHAT_HTML = """
             display: block;
         }
         
-        .confidence-high { color: #4CAF50; font-weight: bold; }
-        .confidence-medium { color: #FF9800; font-weight: bold; }
-        .confidence-low { color: #F44336; font-weight: bold; }
-        
         .loading {
             display: inline-block;
             width: 20px;
@@ -319,6 +302,14 @@ CHAT_HTML = """
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -329,11 +320,11 @@ CHAT_HTML = """
                 <button class="action-button" onclick="sendQuickAction('check prices for all tracked products')">
                     📊 Check All Prices
                 </button>
-                <button class="action-button" onclick="sendQuickAction('list all competitors with their status')">
+                <button class="action-button" onclick="sendQuickAction('list all competitors')">
                     🏪 View Competitors
                 </button>
-                <button class="action-button" onclick="sendQuickAction('show me the scraping confidence report')">
-                    📈 Confidence Report
+                <button class="action-button" onclick="sendQuickAction('list all tracked products')">
+                    📦 Tracked Products
                 </button>
                 <button class="action-button" onclick="sendQuickAction('help me add a new product to track')">
                     ➕ Track New Product
@@ -341,27 +332,27 @@ CHAT_HTML = """
                 <button class="action-button" onclick="sendQuickAction('analyze pricing trends for the last 7 days')">
                     📉 Price Trends
                 </button>
-                <button class="action-button" onclick="sendQuickAction('list all tracked products')">
-                    📦 Tracked Products
+                <button class="action-button" onclick="sendQuickAction('get price history for Wyld products')">
+                    📈 Price History
                 </button>
-                <button class="action-button" onclick="sendQuickAction('analyze scraping performance')">
-                    🔍 Performance Analysis
+                <button class="action-button" onclick="sendQuickAction('create a batch job to check all prices')">
+                    🔄 Batch Check
                 </button>
             </div>
             
             <h2>📝 Examples</h2>
             <div style="font-size: 14px; opacity: 0.9;">
                 <p style="margin-bottom: 10px;">• "Check prices for Wyld Gummies"</p>
-                <p style="margin-bottom: 10px;">• "The price at Harborside should be $18"</p>
-                <p style="margin-bottom: 10px;">• "Show confidence for Elemental Wellness"</p>
-                <p style="margin-bottom: 10px;">• "Create batch job for all edibles"</p>
+                <p style="margin-bottom: 10px;">• "Add competitor: Example Dispensary"</p>
+                <p style="margin-bottom: 10px;">• "Track product: Blue Dream"</p>
+                <p style="margin-bottom: 10px;">• "Show batch job status"</p>
             </div>
         </div>
         
         <div class="main-content">
             <div class="header">
                 <h1>Competitive Pricing Assistant</h1>
-                <p>Track cannabis prices across dispensaries with confidence scoring</p>
+                <p>Track cannabis prices across dispensaries</p>
             </div>
             
             <div class="chat-container" id="chatContainer">
@@ -372,10 +363,10 @@ CHAT_HTML = """
                         <ul>
                             <li>🔍 <strong>Check prices</strong> across all competitors</li>
                             <li>📊 <strong>Track products</strong> and monitor changes</li>
-                            <li>🎯 <strong>Learn from corrections</strong> to improve accuracy</li>
-                            <li>📈 <strong>Analyze trends</strong> and scraping performance</li>
+                            <li>📈 <strong>Analyze trends</strong> and price history</li>
+                            <li>🔄 <strong>Create batch jobs</strong> for bulk price checking</li>
                         </ul>
-                        <p>All results include confidence scores (🟢 High, 🟡 Medium, 🔴 Low) to help you assess data reliability!</p>
+                        <p>Try the quick actions on the left or type your own query!</p>
                     </div>
                 </div>
             </div>
@@ -407,16 +398,24 @@ CHAT_HTML = """
         const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typingIndicator');
         
+        let isConnected = false;
+        
         ws.onopen = () => {
             console.log('Connected to chat server');
+            isConnected = true;
         };
         
         ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'response') {
-                addMessage(data.content, 'assistant');
-                typingIndicator.classList.remove('active');
-                sendButton.disabled = false;
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'response') {
+                    addMessage(data.content, 'assistant');
+                    typingIndicator.classList.remove('active');
+                    sendButton.disabled = false;
+                }
+            } catch (e) {
+                console.error('Error parsing message:', e);
+                addMessage('Error processing response', 'assistant');
             }
         };
         
@@ -425,6 +424,7 @@ CHAT_HTML = """
             addMessage('Connection error. Please refresh the page.', 'assistant');
             sendButton.disabled = false;
             typingIndicator.classList.remove('active');
+            isConnected = false;
         };
         
         ws.onclose = (event) => {
@@ -434,6 +434,7 @@ CHAT_HTML = """
             }
             sendButton.disabled = false;
             typingIndicator.classList.remove('active');
+            isConnected = false;
         };
         
         function handleKeyPress(event) {
@@ -444,7 +445,7 @@ CHAT_HTML = """
         
         function sendMessage() {
             const message = messageInput.value.trim();
-            if (message && !sendButton.disabled) {
+            if (message && !sendButton.disabled && isConnected) {
                 addMessage(message, 'user');
                 ws.send(JSON.stringify({
                     type: 'message',
@@ -453,6 +454,8 @@ CHAT_HTML = """
                 messageInput.value = '';
                 sendButton.disabled = true;
                 typingIndicator.classList.add('active');
+            } else if (!isConnected) {
+                addMessage('Not connected. Please refresh the page.', 'assistant');
             }
         }
         
@@ -468,20 +471,17 @@ CHAT_HTML = """
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             
-            // Parse markdown
-            const htmlContent = marked.parse(content);
-            contentDiv.innerHTML = htmlContent;
-            
-            // Apply confidence styling
-            contentDiv.querySelectorAll('td, p').forEach(el => {
-                if (el.textContent.includes('🟢')) {
-                    el.classList.add('confidence-high');
-                } else if (el.textContent.includes('🟡')) {
-                    el.classList.add('confidence-medium');
-                } else if (el.textContent.includes('🔴')) {
-                    el.classList.add('confidence-low');
+            // Parse markdown if assistant message
+            if (sender === 'assistant') {
+                try {
+                    const htmlContent = marked.parse(content);
+                    contentDiv.innerHTML = htmlContent;
+                } catch (e) {
+                    contentDiv.textContent = content;
                 }
-            });
+            } else {
+                contentDiv.textContent = content;
+            }
             
             messageDiv.appendChild(contentDiv);
             chatContainer.appendChild(messageDiv);
@@ -505,7 +505,8 @@ async def health_check():
         return {
             "status": "healthy",
             "agent": "initialized" if agent else "not initialized",
-            "websocket_path": "/chat/ws"
+            "websocket_path": "/chat/ws",
+            "tools_count": len(agent.tools) if agent else 0
         }
     except Exception as e:
         return {
@@ -530,44 +531,32 @@ async def websocket_endpoint(websocket: WebSocket):
             if data.get("type") == "message":
                 message = data.get("content", "")
                 
-                # Run agent
+                # Run agent with proper error handling
                 try:
-                    # Handle both sync and async run methods
-                    if hasattr(agent, 'run_sync'):
-                        response = agent.run_sync(
-                            message=message,
-                            user_id=client_id,
-                            session_id=client_id
-                        )
-                    else:
-                        # For async run, we need to handle it properly
-                        import inspect
-                        if inspect.iscoroutinefunction(agent.run):
-                            response = await agent.run(
-                                message=message,
-                                user_id=client_id,
-                                session_id=client_id
-                            )
-                        else:
-                            response = agent.run(
-                                message=message,
-                                user_id=client_id,
-                                session_id=client_id
-                            )
+                    # Use run_sync which is the standard method
+                    response = agent.run_sync(
+                        message=message,
+                        user_id=client_id,
+                        session_id=client_id
+                    )
                     
                     # Send response
                     await manager.send_message(
                         json.dumps({
                             "type": "response",
-                            "content": response.content
+                            "content": response.content if hasattr(response, 'content') else str(response)
                         }),
                         client_id
                     )
                 except Exception as e:
+                    import traceback
+                    error_details = traceback.format_exc()
+                    print(f"Error in agent.run_sync: {error_details}")
+                    
                     await manager.send_message(
                         json.dumps({
                             "type": "response",
-                            "content": f"❌ Error: {str(e)}"
+                            "content": f"❌ Error: {str(e)}\n\nPlease try rephrasing your request."
                         }),
                         client_id
                     )

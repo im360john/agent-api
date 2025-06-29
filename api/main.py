@@ -6,11 +6,16 @@ from api.settings import api_settings
 
 # Try to import chat UI routes
 try:
-    from api.routes.chat_ui import chat_router
+    from api.routes.chat_ui_fixed import chat_router
     CHAT_UI_AVAILABLE = True
 except Exception as e:
-    print(f"Warning: Could not import chat UI: {e}")
-    CHAT_UI_AVAILABLE = False
+    print(f"Warning: Could not import fixed chat UI: {e}")
+    try:
+        from api.routes.chat_ui import chat_router
+        CHAT_UI_AVAILABLE = True
+    except Exception as e2:
+        print(f"Warning: Could not import chat UI: {e2}")
+        CHAT_UI_AVAILABLE = False
 
 # Import simple fallback
 try:
