@@ -119,7 +119,6 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         add_datetime_to_instructions=True,
         add_history_to_messages=True,
         num_history_runs=3,
-        show_full_reasoning=True,
         # Use Sonnet 4 as reasoning model when using Claude
         reasoning_model=Claude(
             id="claude-sonnet-4-20250514",
