@@ -48,7 +48,12 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Select model based on model_id
     if model_id.startswith("claude"):
-        model = Claude(id=model_id)
+        model = Claude(
+            id=model_id,
+            max_tokens=4096,
+            thinking={"type": "enabled", "budget_tokens": 2048},
+            default_headers={"anthropic-beta": "code-execution-2025-05-22"}
+        )
     else:
         model = OpenAIChat(id=model_id)
     
@@ -85,11 +90,19 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     Format responses with clear tables and actionable insights."""
     
+    # Build tools list - add code execution for Claude models
+    agent_tools = [tools]
+    if model_id.startswith("claude"):
+        agent_tools.append({
+            "type": "code_execution_20250522",
+            "name": "code_execution"
+        })
+    
     return Agent(
         name="competitive_pricing_chat",
         agent_id="competitive_pricing_chat", 
         model=model,
-        tools=[tools],
+        tools=agent_tools,
         storage=PostgresAgentStorage(
             table_name="competitive_pricing_chat_agents", 
             db_url=db_url
@@ -111,7 +124,11 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         num_history_runs=3,
         show_full_reasoning=True,
         # Use Sonnet 4 as reasoning model when using Claude
-        reasoning_model=Claude(id="claude-sonnet-4-20250514") if model_id.startswith("claude") else None,
+        reasoning_model=Claude(
+            id="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            thinking={"type": "enabled", "budget_tokens": 2048}
+        ) if model_id.startswith("claude") else None,
     )
 
 # Cache agent instance
@@ -611,17 +628,64 @@ CHAT_HTML = """
             isConnected = true;
         };
         
+        let currentStreamMessage = null;
+        let currentStreamContent = '';
+        
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'response') {
-                    addMessage(data.content, 'assistant');
+                
+                if (data.type === 'stream') {
+                    // Handle streaming chunks
+                    if (!currentStreamMessage) {
+                        currentStreamMessage = document.createElement('div');
+                        currentStreamMessage.className = 'message assistant';
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'message-content';
+                        currentStreamMessage.appendChild(contentDiv);
+                        chatContainer.appendChild(currentStreamMessage);
+                    }
+                    
+                    currentStreamContent += data.content;
+                    const contentDiv = currentStreamMessage.querySelector('.message-content');
+                    
+                    // Parse markdown for the accumulated content
+                    try {
+                        contentDiv.innerHTML = marked.parse(currentStreamContent);
+                    } catch (e) {
+                        contentDiv.textContent = currentStreamContent;
+                    }
+                    
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    
+                } else if (data.type === 'response') {
+                    // Final response received
+                    if (currentStreamMessage) {
+                        // Update with final content
+                        const contentDiv = currentStreamMessage.querySelector('.message-content');
+                        try {
+                            contentDiv.innerHTML = marked.parse(data.content);
+                        } catch (e) {
+                            contentDiv.textContent = data.content;
+                        }
+                    } else {
+                        // Fallback for non-streaming responses
+                        addMessage(data.content, 'assistant');
+                    }
+                    
+                    // Reset streaming state
+                    currentStreamMessage = null;
+                    currentStreamContent = '';
                     typingIndicator.classList.remove('active');
                     sendButton.disabled = false;
                 }
             } catch (e) {
                 console.error('Error parsing message:', e);
                 addMessage('Error processing response', 'assistant');
+                currentStreamMessage = null;
+                currentStreamContent = '';
+                typingIndicator.classList.remove('active');
+                sendButton.disabled = false;
             }
         };
         
@@ -912,18 +976,29 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Get agent with selected model
                     agent = get_agent(model_id)
                     
-                    # Use async run method since our tools are async
-                    response = await agent.arun(
+                    # Use async run method with streaming
+                    response_content = ""
+                    async for chunk in agent.arun_stream(
                         message,
                         user_id=user_id,
                         session_id=session_id
-                    )
+                    ):
+                        if chunk.content:
+                            response_content += chunk.content
+                            # Send streaming chunk
+                            await manager.send_message(
+                                json.dumps({
+                                    "type": "stream",
+                                    "content": chunk.content
+                                }),
+                                client_id
+                            )
                     
-                    # Send response
+                    # Send final complete response
                     await manager.send_message(
                         json.dumps({
                             "type": "response",
-                            "content": response.content if hasattr(response, 'content') else str(response)
+                            "content": response_content
                         }),
                         client_id
                     )
