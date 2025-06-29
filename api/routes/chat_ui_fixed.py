@@ -47,6 +47,11 @@ def create_pricing_agent() -> Agent:
     
     instructions = """You are a competitive pricing assistant for cannabis dispensaries.
 
+    IMPORTANT: When users ask for prices:
+    1. If the product isn't tracked yet, automatically use track_product to add it
+    2. Then use check_prices to get current data
+    3. Always show URLs scraped along with prices
+    
     Key features:
     - Check prices across competitors
     - Track products and manage competitors
