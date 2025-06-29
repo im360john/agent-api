@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from api.routes.v1_router import v1_router
+from api.routes.chat_ui import chat_router
 from api.settings import api_settings
 
 
@@ -19,6 +20,9 @@ def create_app() -> FastAPI:
 
     # Add v1 router
     app.include_router(v1_router)
+    
+    # Add chat UI router
+    app.include_router(chat_router)
 
     # Add Middlewares
     app.add_middleware(
