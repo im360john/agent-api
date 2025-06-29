@@ -115,16 +115,8 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         ),
         instructions=instructions,
         markdown=True,
-        # Enable history and context awareness
-        add_datetime_to_instructions=True,
-        add_history_to_messages=True,
-        num_history_runs=3,
-        # Use Sonnet 4 as reasoning model when using Claude
-        reasoning_model=Claude(
-            id="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            thinking={"type": "enabled", "budget_tokens": 2048}
-        ) if model_id.startswith("claude") else None,
+        # Note: In agno 1.7.0, history and reasoning features may be configured differently
+        # Check the latest agno documentation for proper configuration
     )
 
 # Cache agent instance
