@@ -624,64 +624,17 @@ CHAT_HTML = """
             isConnected = true;
         };
         
-        let currentStreamMessage = null;
-        let currentStreamContent = '';
-        
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
-                if (data.type === 'stream') {
-                    // Handle streaming chunks
-                    if (!currentStreamMessage) {
-                        currentStreamMessage = document.createElement('div');
-                        currentStreamMessage.className = 'message assistant';
-                        const contentDiv = document.createElement('div');
-                        contentDiv.className = 'message-content';
-                        currentStreamMessage.appendChild(contentDiv);
-                        chatContainer.appendChild(currentStreamMessage);
-                    }
-                    
-                    currentStreamContent += data.content;
-                    const contentDiv = currentStreamMessage.querySelector('.message-content');
-                    
-                    // Parse markdown for the accumulated content
-                    try {
-                        contentDiv.innerHTML = marked.parse(currentStreamContent);
-                    } catch (e) {
-                        contentDiv.textContent = currentStreamContent;
-                    }
-                    
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                    
-                } else if (data.type === 'response') {
-                    // Final response received
-                    if (currentStreamMessage) {
-                        // Update with final content
-                        const contentDiv = currentStreamMessage.querySelector('.message-content');
-                        try {
-                            contentDiv.innerHTML = marked.parse(data.content);
-                        } catch (e) {
-                            contentDiv.textContent = data.content;
-                        }
-                    } else {
-                        // Fallback for non-streaming responses
-                        addMessage(data.content, 'assistant');
-                    }
-                    
-                    // Reset streaming state
-                    currentStreamMessage = null;
-                    currentStreamContent = '';
+                if (data.type === 'response') {
+                    addMessage(data.content, 'assistant');
                     typingIndicator.classList.remove('active');
                     sendButton.disabled = false;
                 }
             } catch (e) {
                 console.error('Error parsing message:', e);
                 addMessage('Error processing response', 'assistant');
-                currentStreamMessage = null;
-                currentStreamContent = '';
-                typingIndicator.classList.remove('active');
-                sendButton.disabled = false;
             }
         };
         
@@ -972,29 +925,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Get agent with selected model
                     agent = get_agent(model_id)
                     
-                    # Use async run method with streaming
-                    response_content = ""
-                    async for chunk in agent.arun_stream(
+                    # Use async run method without streaming for now
+                    response = await agent.arun(
                         message,
                         user_id=user_id,
                         session_id=session_id
-                    ):
-                        if chunk.content:
-                            response_content += chunk.content
-                            # Send streaming chunk
-                            await manager.send_message(
-                                json.dumps({
-                                    "type": "stream",
-                                    "content": chunk.content
-                                }),
-                                client_id
-                            )
+                    )
                     
-                    # Send final complete response
+                    # Send response
                     await manager.send_message(
                         json.dumps({
                             "type": "response",
-                            "content": response_content
+                            "content": response.content if hasattr(response, 'content') else str(response)
                         }),
                         client_id
                     )
