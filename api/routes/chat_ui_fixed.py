@@ -111,10 +111,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
-            ),
-            # Enable session-specific memory
-            create_user_memories=True,
-            create_session_summary=True,
+            )
         ),
         instructions=instructions,
         markdown=True,
