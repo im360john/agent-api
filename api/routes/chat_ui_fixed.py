@@ -54,6 +54,17 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     tools = CompetitorPricingTools(db_url=db_url)
     
+    # Initialize storage (this ensures tables are created)
+    storage = PostgresAgentStorage(
+        table_name="competitive_pricing_chat_agents", 
+        db_url=db_url
+    )
+    # Ensure the storage is properly initialized
+    try:
+        storage.create_tables()
+    except Exception as e:
+        print(f"Note: Storage tables may already exist: {e}")
+    
     # Select model based on model_id
     if model_id.startswith("claude"):
         # Configure Claude with thinking mode and code execution
@@ -129,10 +140,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "agent_id": "competitive_pricing_chat", 
         "model": model,
         "tools": agent_tools,
-        "storage": PostgresAgentStorage(
-            table_name="competitive_pricing_chat_agents", 
-            db_url=db_url
-        ),
+        "storage": storage,
         "memory": Memory(
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
@@ -381,10 +389,11 @@ CHAT_HTML = """
         
         .message-content {
             display: inline-block;
-            padding: 12px 16px;
+            padding: 16px 20px;
             border-radius: 10px;
             max-width: 70%;
             text-align: left;
+            line-height: 1.5;
         }
         
         .message-content ul {
