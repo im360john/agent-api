@@ -15,7 +15,8 @@ from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
 # Import knowledge base components if available
 try:
-    from agno.vectordb.pgvector import PgVector
+    from agno.knowledge.text import TextKnowledgeBase
+    from agno.vectordb.pgvector import PgVector, SearchType
     from agno.embedder.openai import OpenAIEmbedder
     KNOWLEDGE_BASE_AVAILABLE = True
 except ImportError:
@@ -104,6 +105,24 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     # Note: Code execution for Claude is enabled via the default_headers in the model config
     # It doesn't need to be added as an explicit tool
     
+    # Set up knowledge base if available
+    knowledge_base = None
+    if KNOWLEDGE_BASE_AVAILABLE:
+        try:
+            knowledge_base = TextKnowledgeBase(
+                vector_db=PgVector(
+                    table_name="competitive_pricing_knowledge",
+                    db_url=db_url,
+                    search_type=SearchType.hybrid,
+                    embedder=OpenAIEmbedder(
+                        id="text-embedding-3-small"
+                    )
+                ),
+                num_documents=5  # Return top 5 most relevant documents
+            )
+        except Exception as e:
+            print(f"Warning: Could not initialize knowledge base: {e}")
+    
     # Configure agent
     agent_config = {
         "name": "competitive_pricing_chat",
@@ -126,14 +145,13 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "add_datetime_to_instructions": True,
         "add_history_to_messages": True,
         "num_history_runs": 3,
+        "show_tool_calls": True,
     }
     
-    # Add knowledge base if available
-    # Note: In agno 1.7.0, knowledge base configuration may be different
-    # For now, we'll skip this until we understand the proper configuration
-    
-    # Show tool calls for debugging
-    agent_config["show_tool_calls"] = True
+    # Add knowledge base if initialized
+    if knowledge_base:
+        agent_config["knowledge"] = knowledge_base
+        agent_config["search_knowledge"] = True  # Enable agentic RAG
     
     return Agent(**agent_config)
 
