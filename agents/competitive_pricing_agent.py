@@ -79,6 +79,7 @@ class CompetitorPricingTools(Toolkit):
         self.register(self.delete_product)
         self.register(self.list_competitors)
         self.register(self.list_products)
+        self.register(self.search_products)
         self.register(self.analyze_price_freshness)
         self.register(self.check_prices)
         self.register(self.bulk_price_check)
@@ -371,6 +372,104 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             return f"Error listing products: {str(e)}"
     
+    async def search_products(self, search_term: str, limit: int = 10) -> str:
+        """
+        Search for products by name or brand.
+        
+        Args:
+            search_term: Term to search for
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of matching products
+        """
+        try:
+            # Extract potential brand from search term
+            known_brands = ['wyld', 'kiva', 'camino', 'plus', 'wana', 'jetty', 'stiiizy']
+            detected_brand = None
+            
+            search_words = search_term.lower().split()
+            for word in search_words:
+                if word in known_brands:
+                    detected_brand = word
+                    break
+            
+            with self.Session() as session:
+                # Build flexible search query
+                if detected_brand:
+                    # Search within specific brand
+                    query = """
+                        SELECT name, brand, category 
+                        FROM pricing.products 
+                        WHERE LOWER(brand) = :brand
+                        AND LOWER(name) LIKE :pattern
+                        ORDER BY name
+                        LIMIT :limit
+                    """
+                    params = {
+                        "brand": detected_brand,
+                        "pattern": f"%{search_term.replace(detected_brand, '').strip().lower()}%",
+                        "limit": limit
+                    }
+                else:
+                    # Search across all products
+                    query = """
+                        SELECT name, brand, category 
+                        FROM pricing.products 
+                        WHERE LOWER(name || ' ' || brand) LIKE :pattern
+                        ORDER BY brand, name
+                        LIMIT :limit
+                    """
+                    params = {
+                        "pattern": f"%{search_term.lower()}%",
+                        "limit": limit
+                    }
+                
+                result = session.execute(text(query), params)
+                products = result.fetchall()
+                
+                if not products:
+                    # Try fuzzy search with individual words
+                    query = "SELECT name, brand, category FROM pricing.products WHERE "
+                    word_conditions = []
+                    params = {}
+                    
+                    for i, word in enumerate(search_words):
+                        if len(word) > 2:  # Skip very short words
+                            word_conditions.append(f"(LOWER(name) LIKE :word{i} OR LOWER(brand) LIKE :word{i})")
+                            params[f"word{i}"] = f"%{word}%"
+                    
+                    if word_conditions:
+                        query += " OR ".join(word_conditions)
+                        query += f" ORDER BY brand, name LIMIT {limit}"
+                        
+                        result = session.execute(text(query), params)
+                        products = result.fetchall()
+                
+                if not products:
+                    return f"No products found matching '{search_term}'"
+                
+                output = f"**Found {len(products)} products matching '{search_term}':**\n\n"
+                
+                # Group by brand
+                by_brand = {}
+                for name, brand, category in products:
+                    if brand not in by_brand:
+                        by_brand[brand] = []
+                    by_brand[brand].append((name, category))
+                
+                for brand in sorted(by_brand.keys()):
+                    output += f"**{brand}:**\n"
+                    for name, category in sorted(by_brand[brand]):
+                        cat_text = f" ({category})" if category else ""
+                        output += f"• {name}{cat_text}\n"
+                    output += "\n"
+                
+                return output
+                
+        except Exception as e:
+            return f"Error searching products: {str(e)}"
+    
     async def analyze_price_freshness(self, product_name: Optional[str] = None, 
                                      brand: Optional[str] = None,
                                      competitor_names: Optional[List[str]] = None) -> str:
@@ -561,9 +660,28 @@ class CompetitorPricingTools(Toolkit):
             known_brands = ['wyld', 'kiva', 'camino', 'plus', 'wana', 'jetty', 'stiiizy']
             detected_brand = None
             
+            # Normalize common variations
+            product_normalized = product_name.lower()
+            
+            # Common abbreviations and synonyms
+            replacements = {
+                'thc': ['thc', 't.h.c', 't.h.c.'],
+                'cbd': ['cbd', 'c.b.d', 'c.b.d.'],
+                'mg': ['mg', 'milligrams', 'milligram'],
+                'edibles': ['edible', 'edibles', 'gummies', 'gummy'],
+                'indica': ['indica', 'ind'],
+                'sativa': ['sativa', 'sat'],
+                'hybrid': ['hybrid', 'hyb']
+            }
+            
+            # Apply normalizations
+            for standard, variations in replacements.items():
+                for variant in variations:
+                    product_normalized = product_normalized.replace(variant, standard)
+            
             if not brand:
                 # Check if any known brand is in the product name
-                product_words = product_name.lower().split()
+                product_words = product_normalized.split()
                 for word in product_words:
                     if word in known_brands:
                         detected_brand = word
@@ -603,6 +721,43 @@ class CompetitorPricingTools(Toolkit):
                     
                     result = session.execute(text(query), params)
                     products = result.fetchall()
+                
+                # If still no matches, try partial word matching (at least 60% of words)
+                if not products and len(search_words) > 2:
+                    # Try matching with fewer words
+                    min_words = max(1, int(len(search_words) * 0.6))
+                    
+                    # Generate all combinations of words
+                    from itertools import combinations
+                    
+                    for num_words in range(len(search_words), min_words - 1, -1):
+                        if products:  # Stop if we found matches
+                            break
+                            
+                        for word_combo in combinations(search_words, num_words):
+                            query = "SELECT id, name, brand, metadata FROM pricing.products WHERE "
+                            word_conditions = []
+                            temp_params = {}
+                            
+                            for i, word in enumerate(word_combo):
+                                word_conditions.append(f"LOWER(name) LIKE :word{i}")
+                                temp_params[f"word{i}"] = f"%{word}%"
+                            
+                            query += " AND ".join(word_conditions)
+                            
+                            if brand or detected_brand:
+                                query += " AND LOWER(brand) = :brand"
+                                temp_params["brand"] = (brand or detected_brand).lower()
+                            
+                            # Sort by length to prefer shorter (more specific) names
+                            query += " ORDER BY LENGTH(name)"
+                            
+                            result = session.execute(text(query), temp_params)
+                            partial_matches = result.fetchall()
+                            
+                            if partial_matches:
+                                products = partial_matches[:5]  # Limit to top 5 matches
+                                break
                 
                 # If no exact match, try to find variants
                 if not products and (brand or detected_brand):
@@ -647,6 +802,16 @@ class CompetitorPricingTools(Toolkit):
                 
                 if not products:
                     return f"Product not found: {product_name}"
+                
+                # If multiple products found, show them for confirmation
+                if len(products) > 1:
+                    output = f"Found {len(products)} products matching '{product_name}':\n\n"
+                    for _, name, brand_name, _ in products:
+                        output += f"• **{brand_name} {name}**\n"
+                    
+                    output += "\n**Please specify which product you'd like to check prices for.**"
+                    output += "\n\nTip: Use the exact product name from the list above for accurate results."
+                    return output
                 
                 # Get competitors
                 comp_query = "SELECT id, name, urls FROM pricing.competitors WHERE enabled = true"
