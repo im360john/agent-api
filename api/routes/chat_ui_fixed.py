@@ -13,6 +13,13 @@ from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
+# Import knowledge base components if available
+try:
+    from agno.knowledge.pdf import PDFKnowledgeBase
+    from agno.vectordb.pgvector import PgVector
+    KNOWLEDGE_BASE_AVAILABLE = True
+except ImportError:
+    KNOWLEDGE_BASE_AVAILABLE = False
 
 # Import the basic tools
 from agents.competitive_pricing_agent import CompetitorPricingTools
@@ -48,11 +55,12 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Select model based on model_id
     if model_id.startswith("claude"):
-        # Configure Claude with thinking mode
+        # Configure Claude with thinking mode and code execution
         model = Claude(
             id=model_id,
-            max_tokens=4096,
-            thinking=True  # Enable thinking mode per cookbook example
+            max_tokens=2048,
+            thinking={"type": "enabled", "budget_tokens": 1024},  # Proper thinking config
+            default_headers={"anthropic-beta": "code-execution-2025-05-22"}  # Enable code execution
         )
     else:
         model = OpenAIChat(id=model_id)
@@ -93,7 +101,14 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     # Build tools list
     agent_tools = [tools]
     
-    # Configure agent with optional knowledge base
+    # Add bash tool for Claude models (for code execution)
+    if model_id.startswith("claude"):
+        agent_tools.append({
+            "type": "bash_20250124",
+            "name": "bash"
+        })
+    
+    # Configure agent
     agent_config = {
         "name": "competitive_pricing_chat",
         "agent_id": "competitive_pricing_chat", 
@@ -116,6 +131,21 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "add_history_to_messages": True,
         "num_history_runs": 3,
     }
+    
+    # Add knowledge base if available
+    if KNOWLEDGE_BASE_AVAILABLE:
+        try:
+            knowledge_base = PDFKnowledgeBase(
+                path="/tmp/pricing_docs",  # Path for storing pricing documents
+                vector_db=PgVector(
+                    table_name="competitive_pricing_embeddings",
+                    db_url=db_url
+                )
+            )
+            agent_config["knowledge_base"] = knowledge_base
+            agent_config["search_knowledge"] = True
+        except Exception as e:
+            print(f"Warning: Could not initialize knowledge base: {e}")
     
     return Agent(**agent_config)
 
