@@ -1,0 +1,67 @@
+2025-06-29 14:53:47,944 - DEBUG - Using selector: EpollSelector
+2025-06-29 14:53:47,945 - INFO - 🚀 Starting Wyld Sour Apple Sativa comprehensive test
+2025-06-29 14:53:47,945 - INFO - API URL: https://agent-api-xk5r.onrender.com
+2025-06-29 14:53:47,945 - INFO - Test started at: 2025-06-29 14:53:47.945756+00:00
+2025-06-29 14:53:47,946 - INFO - 
+================================================================================
+2025-06-29 14:53:47,946 - INFO - STEP 1: Checking configured competitors
+2025-06-29 14:53:47,946 - INFO - ================================================================================
+2025-06-29 14:53:54,529 - INFO - ✅ Competitors list retrieved:
+2025-06-29 14:53:54,529 - INFO - 📋 **Tracked Competitors:**
+
+1. **Airfield**
+   - Status: Active
+   - URL: https://airfieldsupplyco.com/
+
+2. **Elemental Wellness**
+   - Status: Active
+   - URL: https://www.elementalwellnesscenter.com/
+
+3. **Harborside**
+   - Status: Active
+   - URL: https://shopharborside.com/san-jose/
+
+4. **Theraleaf**
+   - Status: Active
+   - URL: https://www.theraleafsjc.com/
+
+Let me know if you’d like to add new competitors, update URLs, or see more details!
+2025-06-29 14:53:54,529 - INFO - 
+================================================================================
+2025-06-29 14:53:54,529 - INFO - STEP 2: Running Wyld Sour Apple Sativa price check
+2025-06-29 14:53:54,530 - INFO - ================================================================================
+2025-06-29 14:53:54,530 - INFO - 📤 Sending request: check prices for Wyld Sour Apple Sativa gummies across all competitors with verbose logging
+2025-06-29 14:54:32,226 - INFO - Response status: 200
+2025-06-29 14:54:32,227 - INFO - Response time: 37.70 seconds
+2025-06-29 14:54:32,227 - INFO - ✅ Price check completed successfully!
+2025-06-29 14:54:32,227 - INFO - 
+================================================================================
+2025-06-29 14:54:32,227 - INFO - FULL RESPONSE:
+2025-06-29 14:54:32,227 - INFO - ================================================================================
+2025-06-29 14:54:32,227 - INFO - "### \ud83d\udca1 Wyld Sour Apple Sativa Gummies: Competitive Price Check (Verbose Mode)\n\n#### **Summary**\n- The product **Wyld Sour Apple Sativa Gummies** is now being tracked.\n- I checked all major competitors in the system: **Airfield, Elemental Wellness, Harborside, and Theraleaf**.\n\n#### **Results Table**\n\n| Competitor         | Price         | Member Price | Status           | Freshness         | Last Updated     |\n|--------------------|--------------|--------------|------------------|-------------------|------------------|\n| Airfield           | \u2014            | \u2014            | \u274c Not Carried   | \ud83d\udfe2 Fresh          | < 1 hour ago     |\n| Elemental Wellness | \u2014            | \u2014            | \u274c Not Carried   | \ud83d\udfe2 Fresh          | < 1 hour ago     |\n| Harborside         | \u2014            | \u2014            | \u274c Not Carried   | \ud83d\udfe2 Fresh          | < 1 hour ago     |\n| Theraleaf          | \u2014            | \u2014            | \u274c Not Carried   | \ud83d\udfe2 Fresh          | < 1 hour ago     |\n\n- **Data Freshness:** All results are \ud83d\udfe2 fresh (updated less than 1 hour ago).\n- **Availability:** None of these dispensaries currently carry Wyld Sour Apple Sativa Gummies.\n- **Variants:** No alternative Wyld Sour Apple gummies or flavors were found at these locations.\n\n---\n\n#### **Actionable Insights**\n- If you wish to track similar Wyld gummies (like Strawberry, Raspberry, etc.) for competitive comparison, let me know\u2014I can show available variants and their prices.\n- I can also monitor for future availability changes or check different product types or brands.\n\nWould you like to see price trends for other Wyld gummies, or track another product or competitor?"
+2025-06-29 14:54:32,227 - INFO - ================================================================================
+2025-06-29 14:54:32,227 - INFO - 
+================================================================================
+2025-06-29 14:54:32,227 - INFO - RESPONSE ANALYSIS:
+2025-06-29 14:54:32,227 - INFO - ================================================================================
+2025-06-29 14:54:32,228 - INFO - ❌ Product not carried status detected
+2025-06-29 14:54:32,228 - INFO - 
+================================================================================
+2025-06-29 14:54:32,228 - INFO - STEP 3: Checking if Wyld Sour Apple products are tracked
+2025-06-29 14:54:32,228 - INFO - ================================================================================
+2025-06-29 14:54:44,236 - INFO - 📋 Tracked products response:
+2025-06-29 14:54:44,236 - INFO - Here are all tracked products containing 'sour apple' or 'wyld':
+
+| Brand         | Product Name                                   | Category   |
+|---------------|------------------------------------------------|------------|
+| Wyld          | Sour Apple Sativa Gummies                      | edibles    |
+| Wyld          | Strawberry 20:1 CBD Hybrid Gummies             | edibles    |
+| Wyld          | Strawberry CBD Gummies                         | edibles    |
+| Wyld          | Strawberry Gummies                             | edibles    |
+| Wyld Wyld     | Strawberry 20:1 CBD Hybrid Gummies             | edibles    |
+| Wyld Wyld     | Strawberry Gummies                             | edibles    |
+
+Let me know if you want price checks, history, or competitor insights for any of these products!
+2025-06-29 14:54:44,237 - INFO - 
+🏁 Test completed at: 2025-06-29 14:54:44.237494+00:00
+2025-06-29 14:54:44,237 - INFO - 📄 Full log saved to: wyld_sour_apple_test.log

@@ -1,0 +1,47 @@
+2025-06-29 14:55:31,467 - DEBUG - Using selector: EpollSelector
+2025-06-29 14:55:31,468 - INFO - 🔍 Starting detailed scraping analysis
+2025-06-29 14:55:31,468 - INFO - 
+================================================================================
+2025-06-29 14:55:31,469 - INFO - TEST 1: Force scraping by tracking a new product
+2025-06-29 14:55:31,469 - INFO - ================================================================================
+2025-06-29 14:55:31,469 - INFO - 📤 Tracking new product: track product: Wyld Elderberry Gummies, brand: Wyld, category: edibles
+2025-06-29 14:56:04,318 - INFO - ✅ Product tracking response:
+2025-06-29 14:56:04,318 - INFO - "### Wyld Elderberry Gummies: Competitive Price Tracking\n\n| Competitor         | Price   | Member Price | Status         | Freshness      | Last Updated   |\n|--------------------|---------|--------------|----------------|----------------|---------------|\n| Harborside         | $20.00  | $15.00       | \u2705 In Stock     | \ud83d\udfe2 Fresh       | < 1 hour ago  |\n| Theraleaf          | \u2014       | \u2014            | \u274c Not Carried  | \ud83d\udfe2 Fresh       | < 1 hour ago  |\n| Elemental Wellness | \u2014       | \u2014            | \u274c Not Carried  | \ud83d\udfe2 Fresh       | < 1 hour ago  |\n| Airfield           | \u2014       | \u2014            | \u274c Not Carried  | \ud83d\udfe2 Fresh       | < 1 hour ago  |\n\n#### Key Insights:\n- **\ud83c\udfc6 Best Price:** $20.00 at Harborside ($15.00 for members)\n- **Availability:** Only available at Harborside (in stock)\n- **Other Competitors:** Not carried at Theraleaf, Elemental Wellness, or Airfield\n- **Data freshness:** All information is less than 1 hour old (\ud83d\udfe2 Fresh)\n\nWould you like ongoing monitoring, price trend analysis, or to add other Wyld products/variants for tracking?"
+2025-06-29 14:56:04,319 - INFO - 
+================================================================================
+2025-06-29 14:56:04,320 - INFO - TEST 2: Check prices for newly tracked product
+2025-06-29 14:56:04,320 - INFO - ================================================================================
+2025-06-29 14:56:04,320 - INFO - 📤 Checking prices: check prices for Wyld Elderberry Gummies across all competitors
+2025-06-29 14:56:38,917 - INFO - ✅ Price check response:
+2025-06-29 14:56:38,918 - INFO - "## \ud83d\udcb0 Wyld Elderberry Gummies: Competitive Price Check\n\n| Competitor          | Price   | Member Price | Status           | Data Freshness   |\n|---------------------|---------|--------------|------------------|------------------|\n| Harborside          | $20.00  | $15.00       | \u2705 In Stock       | \ud83d\udfe2 Fresh (<1hr)  |\n| Elemental Wellness  | \u2014       | \u2014            | \u274c Not Carried    | \ud83d\udfe2 Fresh (<1hr)  |\n| Theraleaf           | \u2014       | \u2014            | \u274c Not Carried    | \ud83d\udfe2 Fresh (<1hr)  |\n| Airfield            | \u2014       | \u2014            | \u274c Not Carried    | \ud83d\udfe2 Fresh (<1hr)  |\n\n### Insights:\n- \ud83c\udfc6 **Lowest price:** $20.00 at Harborside ($15.00 for members)\n- \ud83d\udcca **Average price where available:** $20.00\n- Only Harborside currently carries this product; it\u2019s in stock and data is very fresh.\n- Airfield, Elemental Wellness, and Theraleaf do not carry Wyld Elderberry Gummies.\n\nLet me know if you want historical pricing or trends for this product, or to check additional Wyld variants!"
+2025-06-29 14:56:38,918 - INFO - 
+--------------------------------------------------
+2025-06-29 14:56:38,918 - INFO - SCRAPING ANALYSIS:
+2025-06-29 14:56:38,918 - INFO - --------------------------------------------------
+2025-06-29 14:56:38,918 - INFO - 
+================================================================================
+2025-06-29 14:56:38,918 - INFO - TEST 3: Search for URLs at specific competitor
+2025-06-29 14:56:38,918 - INFO - ================================================================================
+2025-06-29 14:56:38,918 - INFO - 📤 Searching URLs: search for Wyld Elderberry Gummies URLs at Harborside dispensary
+2025-06-29 14:57:18,437 - INFO - ✅ URL search response:
+2025-06-29 14:57:18,437 - INFO - "Here is the direct product URL for Wyld Elderberry Gummies at Harborside (San Jose):\n\n- **Wyld Elderberry 2:1 CBN Indica Enhanced Gummies**\n  - [View Product at Harborside](https://shopharborside.com/san-jose/products/416759/wyld-elderberry-2-1-cbn-indica-enhanced-gummies-100mg-thc-50mg-cbn/?fromMenu=true)\n\nThis matches your request and links directly to the product on the dispensary's online menu. If you need additional variants or want to compare with other locations, let me know!"
+2025-06-29 14:57:18,437 - INFO - 
+================================================================================
+2025-06-29 14:57:18,437 - INFO - TEST 4: List all tracked products to see database state
+2025-06-29 14:57:18,437 - INFO - ================================================================================
+2025-06-29 14:57:46,483 - INFO - ✅ All tracked products:
+2025-06-29 14:57:46,483 - INFO - Here are all the products currently being tracked:
+
+| Product Name                                    | Brand   | Category | Date Added   |
+|-------------------------------------------------|---------|----------|--------------|
+| Wyld Elderberry Gummies                         | Wyld    | Edibles  | 2025-06-29   |
+| Wyld Sour Apple Sativa Gummies                  | Wyld    | Edibles  | 2025-06-29   |
+| Wyld Strawberry 20:1 CBD Hybrid Gummies         | Wyld    | Edibles  | 2025-06-28   |
+| Wyld Strawberry CBD Gummies                     | Wyld    | Edibles  | 2025-06-28   |
+| Wyld Strawberry Gummies                         | Wyld    | Edibles  | 2025-06-28   |
+| Wyld Wyld Strawberry 20:1 CBD Hybrid Gummies    | Wyld    | Edibles  | 2025-06-28   |
+| Wyld Wyld Strawberry Gummies                    | Wyld    | Edibles  | 2025-06-28   |
+
+If you need price checks or trends on any of these products, just let me know!
+2025-06-29 14:57:46,484 - INFO - 
+🏁 Detailed analysis completed at: 2025-06-29 14:57:46.484228+00:00
