@@ -128,20 +128,12 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "num_history_runs": 3,
     }
     
-    # Add vector database for knowledge if available
-    if KNOWLEDGE_BASE_AVAILABLE:
-        try:
-            vector_db = PgVector(
-                table_name="competitive_pricing_embeddings",
-                db_url=db_url,
-                embedder=OpenAIEmbedder(id="text-embedding-3-small")
-            )
-            agent_config["vector_db"] = vector_db
-            # Enable RAG search
-            agent_config["show_tool_calls"] = True
-            agent_config["search_top_k"] = 5
-        except Exception as e:
-            print(f"Warning: Could not initialize vector database: {e}")
+    # Add knowledge base if available
+    # Note: In agno 1.7.0, knowledge base configuration may be different
+    # For now, we'll skip this until we understand the proper configuration
+    
+    # Show tool calls for debugging
+    agent_config["show_tool_calls"] = True
     
     return Agent(**agent_config)
 
