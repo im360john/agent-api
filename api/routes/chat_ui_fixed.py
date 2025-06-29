@@ -8,7 +8,7 @@ from typing import Dict, Any
 from datetime import datetime
 
 from agno.models.openai import OpenAIChat
-from agno.models.anthropic import AnthropicChat
+from agno.models.anthropic import Claude
 from agno.agent import Agent
 from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
@@ -48,7 +48,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Select model based on model_id
     if model_id.startswith("claude"):
-        model = AnthropicChat(id=model_id)
+        model = Claude(id=model_id)
     else:
         model = OpenAIChat(id=model_id)
     
@@ -111,7 +111,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         num_history_runs=3,
         show_full_reasoning=True,
         # Use Sonnet 4 as reasoning model when using Claude
-        reasoning_model=AnthropicChat(id="claude-sonnet-4-20250514") if model_id.startswith("claude") else None,
+        reasoning_model=Claude(id="claude-sonnet-4-20250514") if model_id.startswith("claude") else None,
     )
 
 # Cache agent instance
