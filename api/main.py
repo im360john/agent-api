@@ -2,8 +2,23 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from api.routes.v1_router import v1_router
-from api.routes.chat_ui import chat_router
 from api.settings import api_settings
+
+# Try to import chat UI routes
+try:
+    from api.routes.chat_ui import chat_router
+    CHAT_UI_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Could not import chat UI: {e}")
+    CHAT_UI_AVAILABLE = False
+
+# Import simple fallback
+try:
+    from api.routes.chat_ui_simple import chat_router_simple
+    SIMPLE_UI_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Could not import simple chat UI: {e}")
+    SIMPLE_UI_AVAILABLE = False
 
 
 def create_app() -> FastAPI:
@@ -21,8 +36,13 @@ def create_app() -> FastAPI:
     # Add v1 router
     app.include_router(v1_router)
     
-    # Add chat UI router
-    app.include_router(chat_router)
+    # Add chat UI router if available
+    if CHAT_UI_AVAILABLE:
+        app.include_router(chat_router)
+    elif SIMPLE_UI_AVAILABLE:
+        # Use simple fallback
+        app.include_router(chat_router_simple)
+        print("Using simple chat UI fallback")
 
     # Add Middlewares
     app.add_middleware(

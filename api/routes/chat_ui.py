@@ -14,7 +14,11 @@ from agno.memory.v2.db.postgres import PostgresMemoryDb
 from agno.memory.v2.memory import Memory
 from agno.storage.agent.postgres import PostgresAgentStorage
 
-from agents.competitive_pricing_agent_enhanced import EnhancedCompetitorPricingTools
+try:
+    from agents.competitive_pricing_agent_enhanced import EnhancedCompetitorPricingTools
+except ImportError:
+    # Fallback to regular agent if enhanced version not available
+    from agents.competitive_pricing_agent import CompetitorPricingTools as EnhancedCompetitorPricingTools
 from db.session import db_url
 
 # Create router
@@ -43,7 +47,11 @@ manager = ConnectionManager()
 def create_pricing_agent() -> Agent:
     """Create the enhanced competitive pricing agent"""
     
-    tools = EnhancedCompetitorPricingTools(db_url=db_url)
+    try:
+        tools = EnhancedCompetitorPricingTools(db_url=db_url)
+    except Exception as e:
+        print(f"Error initializing tools: {e}")
+        raise
     
     instructions = """You are a competitive pricing assistant for cannabis dispensaries.
 
@@ -56,24 +64,28 @@ def create_pricing_agent() -> Agent:
     Always mention confidence levels and data freshness when reporting prices.
     Format responses with clear tables and actionable insights."""
     
-    return Agent(
-        name="competitive_pricing_chat",
-        agent_id="competitive_pricing_chat", 
-        model=OpenAIChat(id="gpt-4o"),
-        tools=tools,
-        storage=PostgresAgentStorage(
-            table_name="competitive_pricing_chat_agents", 
-            db_url=db_url
-        ),
-        memory=Memory(
-            db=PostgresMemoryDb(
-                table_name="competitive_pricing_chat_memory",
-                db_url=db_url,
-            )
-        ),
-        instructions=instructions,
-        markdown=True,
-    )
+    try:
+        return Agent(
+            name="competitive_pricing_chat",
+            agent_id="competitive_pricing_chat", 
+            model=OpenAIChat(id="gpt-4o"),
+            tools=tools,
+            storage=PostgresAgentStorage(
+                table_name="competitive_pricing_chat_agents", 
+                db_url=db_url
+            ),
+            memory=Memory(
+                db=PostgresMemoryDb(
+                    table_name="competitive_pricing_chat_memory",
+                    db_url=db_url,
+                )
+            ),
+            instructions=instructions,
+            markdown=True,
+        )
+    except Exception as e:
+        print(f"Error creating agent: {e}")
+        raise
 
 # Cache agent instance
 _agent = None
@@ -387,7 +399,9 @@ CHAT_HTML = """
     </div>
 
     <script>
-        const ws = new WebSocket(`ws://${window.location.host}/chat/ws`);
+        // Use wss:// for HTTPS, ws:// for HTTP
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${protocol}//${window.location.host}/chat/ws`);
         const chatContainer = document.getElementById('chatContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
@@ -409,6 +423,17 @@ CHAT_HTML = """
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
             addMessage('Connection error. Please refresh the page.', 'assistant');
+            sendButton.disabled = false;
+            typingIndicator.classList.remove('active');
+        };
+        
+        ws.onclose = (event) => {
+            console.log('WebSocket closed:', event);
+            if (event.code !== 1000) {
+                addMessage('Connection lost. Please refresh the page to reconnect.', 'assistant');
+            }
+            sendButton.disabled = false;
+            typingIndicator.classList.remove('active');
         };
         
         function handleKeyPress(event) {
@@ -471,6 +496,23 @@ CHAT_HTML = """
 async def chat_interface():
     """Serve the chat interface"""
     return HTMLResponse(content=CHAT_HTML)
+
+@chat_router.get("/health")
+async def health_check():
+    """Health check endpoint for debugging"""
+    try:
+        agent = get_agent()
+        return {
+            "status": "healthy",
+            "agent": "initialized" if agent else "not initialized",
+            "websocket_path": "/chat/ws"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "websocket_path": "/chat/ws"
+        }
 
 @chat_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
