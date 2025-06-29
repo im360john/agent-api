@@ -29,10 +29,7 @@ async def test_agent():
         import asyncio
         response = await asyncio.get_event_loop().run_in_executor(
             None,
-            agent.run,
-            "list all competitors",
-            "test_user",
-            "test_session"
+            lambda: agent.run("list all competitors", user_id="test_user", session_id="test_session")
         )
         
         return {

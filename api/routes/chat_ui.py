@@ -529,10 +529,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     import asyncio
                     response = await asyncio.get_event_loop().run_in_executor(
                         None,
-                        agent.run,
-                        message,
-                        client_id,
-                        client_id
+                        lambda: agent.run(message, user_id=client_id, session_id=client_id)
                     )
                     
                     # Send response

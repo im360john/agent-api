@@ -505,8 +505,7 @@ async def health_check():
         return {
             "status": "healthy",
             "agent": "initialized" if agent else "not initialized",
-            "websocket_path": "/chat/ws",
-            "tools_count": len(agent.tools) if agent else 0
+            "websocket_path": "/chat/ws"
         }
     except Exception as e:
         return {
@@ -533,9 +532,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run agent with proper error handling
                 try:
-                    # Use run method
+                    # Use run method with correct signature
                     response = agent.run(
-                        message=message,
+                        message,
                         user_id=client_id,
                         session_id=client_id
                     )
