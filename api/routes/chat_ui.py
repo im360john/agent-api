@@ -525,11 +525,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run agent
                 try:
-                    # Use run_sync for synchronous execution
-                    response = agent.run_sync(
-                        message=message,
-                        user_id=client_id,
-                        session_id=client_id
+                    # Run agent in a thread pool to avoid blocking
+                    import asyncio
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        agent.run,
+                        message,
+                        client_id,
+                        client_id
                     )
                     
                     # Send response
