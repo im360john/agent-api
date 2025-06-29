@@ -55,11 +55,11 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Select model based on model_id
     if model_id.startswith("claude"):
-        # Configure Claude with code execution
-        # Note: Thinking mode is temporarily disabled due to message format requirements
+        # Configure Claude with thinking mode and code execution
         model = Claude(
             id=model_id,
-            max_tokens=4096,
+            max_tokens=2048,
+            thinking={"type": "enabled", "budget_tokens": 1024},
             default_headers={"anthropic-beta": "code-execution-2025-05-22"}  # Enable code execution
         )
     else:
