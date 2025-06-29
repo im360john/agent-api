@@ -1032,10 +1032,10 @@ class CompetitorPricingTools(Toolkit):
                     FROM pricing.price_history ph
                     JOIN pricing.competitors c ON c.id = ph.competitor_id
                     WHERE ph.product_id = :product_id
-                      AND ph.scraped_at >= CURRENT_DATE - INTERVAL :days
+                      AND ph.scraped_at >= CURRENT_DATE - CAST(:days_interval AS INTERVAL)
                     GROUP BY c.name, DATE(ph.scraped_at)
                     ORDER BY c.name, date DESC
-                """), {"product_id": product_id, "days": f"{days} days"})
+                """), {"product_id": product_id, "days_interval": f"{days} days"})
                 
                 history_data = history_result.fetchall()
                 
@@ -1109,17 +1109,17 @@ class CompetitorPricingTools(Toolkit):
                             WHERE ph2.product_id = ph1.product_id
                               AND ph2.competitor_id = ph1.competitor_id
                               AND ph2.scraped_at < ph1.scraped_at
-                              AND ph2.scraped_at >= CURRENT_DATE - INTERVAL :days
+                              AND ph2.scraped_at >= CURRENT_DATE - CAST(:days_interval AS INTERVAL)
                             ORDER BY scraped_at DESC
                             LIMIT 1
                         ) ph2 ON true
-                        WHERE ph1.scraped_at >= CURRENT_DATE - INTERVAL :days
+                        WHERE ph1.scraped_at >= CURRENT_DATE - CAST(:days_interval AS INTERVAL)
                     )
                     SELECT * FROM price_changes
                     WHERE previous_price IS NOT NULL
                 """
                 
-                params = {"days": f"{days} days"}
+                params = {"days_interval": f"{days} days"}
                 if category:
                     query += " AND category = :category"
                     params["category"] = category

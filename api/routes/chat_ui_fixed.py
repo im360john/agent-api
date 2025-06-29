@@ -582,7 +582,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 except Exception as e:
                     import traceback
                     error_details = traceback.format_exc()
-                    print(f"Error in agent.run_sync: {error_details}")
+                    print(f"Error in agent.arun: {error_details}")
                     
                     await manager.send_message(
                         json.dumps({
