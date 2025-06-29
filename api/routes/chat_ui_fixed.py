@@ -533,8 +533,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run agent with proper error handling
                 try:
-                    # Use run_sync which is the standard method
-                    response = agent.run_sync(
+                    # Use run method
+                    response = agent.run(
                         message=message,
                         user_id=client_id,
                         session_id=client_id
