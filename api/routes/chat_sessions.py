@@ -49,6 +49,8 @@ async def list_user_sessions(
     """
     List all sessions for a user using agno's storage.
     """
+    print(f"list_user_sessions called with user_id={user_id}, limit={limit}, offset={offset}")
+    
     try:
         # Since get_all_sessions might not exist, query the database directly
         with Session() as db_session:
@@ -75,6 +77,7 @@ async def list_user_sessions(
             })
             
             sessions = result.fetchall()
+            print(f"Query returned {len(sessions)} sessions from database")
         
         # Convert to our SessionInfo format
         session_infos = []
@@ -135,6 +138,10 @@ async def list_user_sessions(
                     first_message=first_msg,
                     last_message=last_msg
                 ))
+        
+        print(f"Returning {len(session_infos)} sessions for user {user_id}")
+        for session in session_infos:
+            print(f"  - Session {session.session_id}: {session.message_count} messages")
         
         return session_infos
             
