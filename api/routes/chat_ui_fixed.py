@@ -142,6 +142,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "tools": agent_tools,
         "storage": storage,
         "memory": Memory(
+            model=model,  # Use the same model as the agent
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
@@ -623,10 +624,17 @@ CHAT_HTML = """
 
     <script>
         // Session management
-        let currentUserId = localStorage.getItem('chatUserId') || generateUserId();
-        let currentSessionId = localStorage.getItem('currentSessionId') || generateSessionId();
-        localStorage.setItem('chatUserId', currentUserId);
-        localStorage.setItem('currentSessionId', currentSessionId);
+        let currentUserId = localStorage.getItem('chatUserId');
+        if (!currentUserId) {
+            currentUserId = generateUserId();
+            localStorage.setItem('chatUserId', currentUserId);
+        }
+        
+        let currentSessionId = localStorage.getItem('currentSessionId');
+        if (!currentSessionId) {
+            currentSessionId = generateSessionId();
+            localStorage.setItem('currentSessionId', currentSessionId);
+        }
         
         console.log('Current user ID:', currentUserId);
         console.log('Current session ID:', currentSessionId);
@@ -1028,6 +1036,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     agent = get_agent(model_id)
                     
                     print(f"Running agent with user_id={user_id}, session_id={session_id}, model_id={model_id}")
+                    print(f"Message content: {message}")
                     
                     # Use async run method with streaming
                     stream = await agent.arun(
@@ -1036,6 +1045,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         session_id=session_id,
                         stream=True
                     )
+                    
+                    print(f"Agent run completed for session {session_id}")
                     
                     # Check if streaming is supported
                     if hasattr(stream, '__aiter__'):
@@ -1061,6 +1072,25 @@ async def websocket_endpoint(websocket: WebSocket):
                             }),
                             client_id
                         )
+                        
+                        # Debug: Check if message was saved
+                        print(f"Checking if message was saved for session {session_id}")
+                        from sqlalchemy import create_engine, text
+                        from sqlalchemy.orm import sessionmaker
+                        debug_engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
+                        DebugSession = sessionmaker(bind=debug_engine)
+                        with DebugSession() as db_session:
+                            check_query = text("""
+                                SELECT COUNT(*) as count 
+                                FROM competitive_pricing_chat_memory 
+                                WHERE session_id = :session_id AND user_id = :user_id
+                            """)
+                            result = db_session.execute(check_query, {
+                                "session_id": session_id,
+                                "user_id": user_id
+                            })
+                            count = result.scalar()
+                            print(f"Found {count} messages in DB for session {session_id}, user {user_id}")
                     else:
                         # Non-streaming response
                         await manager.send_message(
