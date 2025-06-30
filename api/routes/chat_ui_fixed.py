@@ -56,7 +56,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
     
     # Initialize storage (this ensures tables are created)
     storage = PostgresAgentStorage(
-        table_name="ai.competitive_pricing_chat_agents", 
+        table_name="competitive_pricing_chat_agents", 
         db_url=db_url
     )
     # Ensure the storage is properly initialized
@@ -122,7 +122,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         try:
             knowledge_base = TextKnowledgeBase(
                 vector_db=PgVector(
-                    table_name="ai.competitive_pricing_knowledge",
+                    table_name="competitive_pricing_knowledge",
                     db_url=db_url,
                     search_type=SearchType.hybrid,
                     embedder=OpenAIEmbedder(
@@ -143,7 +143,7 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "storage": storage,
         "memory": Memory(
             db=PostgresMemoryDb(
-                table_name="ai.competitive_pricing_chat_memory",
+                table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
             )
         ),
