@@ -62,7 +62,7 @@ async def list_user_sessions(
                     MIN(created_at) as created_at,
                     MAX(created_at) as last_message_at,
                     COUNT(*) as message_count
-                FROM ai.competitive_pricing_chat_memory
+                FROM competitive_pricing_chat_memory
                 WHERE user_id = :user_id
                 GROUP BY session_id, user_id
                 ORDER BY MAX(created_at) DESC
@@ -95,7 +95,7 @@ async def list_user_sessions(
                             created_at,
                             ROW_NUMBER() OVER (ORDER BY created_at ASC) as rn_asc,
                             ROW_NUMBER() OVER (ORDER BY created_at DESC) as rn_desc
-                        FROM ai.competitive_pricing_chat_memory
+                        FROM competitive_pricing_chat_memory
                         WHERE user_id = :user_id AND session_id = :session_id
                     )
                     SELECT 
@@ -168,7 +168,7 @@ async def get_session_messages(
                     user_message,
                     ai_message,
                     created_at
-                FROM ai.competitive_pricing_chat_memory
+                FROM competitive_pricing_chat_memory
                 WHERE session_id = :session_id AND user_id = :user_id
                 ORDER BY created_at ASC
             """)
@@ -232,7 +232,7 @@ async def delete_session(
         with Session() as session:
             # First check if the session belongs to the user
             check_query = text("""
-                SELECT COUNT(*) FROM ai.competitive_pricing_chat_memory
+                SELECT COUNT(*) FROM competitive_pricing_chat_memory
                 WHERE session_id = :session_id AND user_id = :user_id
             """)
             
@@ -247,7 +247,7 @@ async def delete_session(
             
             # Delete the session
             delete_query = text("""
-                DELETE FROM ai.competitive_pricing_chat_memory
+                DELETE FROM competitive_pricing_chat_memory
                 WHERE session_id = :session_id AND user_id = :user_id
             """)
             
@@ -295,7 +295,7 @@ async def delete_all_user_sessions(user_id: str) -> Dict[str, Any]:
             # Get count first
             count_query = text("""
                 SELECT COUNT(DISTINCT session_id) 
-                FROM ai.competitive_pricing_chat_memory
+                FROM competitive_pricing_chat_memory
                 WHERE user_id = :user_id
             """)
             
@@ -304,7 +304,7 @@ async def delete_all_user_sessions(user_id: str) -> Dict[str, Any]:
             
             # Delete all sessions
             delete_query = text("""
-                DELETE FROM ai.competitive_pricing_chat_memory
+                DELETE FROM competitive_pricing_chat_memory
                 WHERE user_id = :user_id
             """)
             

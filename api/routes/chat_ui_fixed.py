@@ -141,26 +141,24 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "model": model,
         "tools": agent_tools,
         "storage": storage,
-        "memory": Memory(
-            model=model,  # Use the same model as the agent
-            db=PostgresMemoryDb(
-                table_name="competitive_pricing_chat_memory",
-                db_url=db_url,
-            ),
-            # Don't clear memories - we want to persist them
-            delete_memories=False,
-            clear_memories=False,
-        ),
+        # Remove memory for now - we'll handle it manually
+        # "memory": Memory(
+        #     model=model,
+        #     db=PostgresMemoryDb(
+        #         table_name="competitive_pricing_chat_memory",
+        #         db_url=db_url,
+        #     ),
+        #     delete_memories=False,
+        #     clear_memories=False,
+        # ),
         "instructions": instructions,
         "markdown": True,
         # Enable history and context awareness
         "add_datetime_to_instructions": True,
-        "add_history_to_messages": True,
-        "num_history_runs": 3,
+        # Disable history since we're not using memory
+        "add_history_to_messages": False,
+        "num_history_runs": 0,
         "show_tool_calls": True,
-        # Enable memory features
-        "enable_agentic_memory": True,
-        "read_chat_history": True,
     }
     
     # Add knowledge base if initialized
@@ -1079,33 +1077,81 @@ async def websocket_endpoint(websocket: WebSocket):
                             client_id
                         )
                         
-                        # Debug: Check if message was saved
-                        print(f"Checking if message was saved for session {session_id}")
-                        from sqlalchemy import create_engine, text
-                        from sqlalchemy.orm import sessionmaker
-                        debug_engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
-                        DebugSession = sessionmaker(bind=debug_engine)
-                        with DebugSession() as db_session:
-                            check_query = text("""
-                                SELECT COUNT(*) as count 
-                                FROM ai.competitive_pricing_chat_memory 
-                                WHERE session_id = :session_id AND user_id = :user_id
-                            """)
-                            result = db_session.execute(check_query, {
-                                "session_id": session_id,
-                                "user_id": user_id
-                            })
-                            count = result.scalar()
-                            print(f"Found {count} messages in DB for session {session_id}, user {user_id}")
+                        # Manually save the message to our table
+                        print(f"Manually saving message for session {session_id}")
+                        try:
+                            from sqlalchemy import create_engine, text
+                            from sqlalchemy.orm import sessionmaker
+                            save_engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
+                            SaveSession = sessionmaker(bind=save_engine)
+                            with SaveSession() as db_session:
+                                # Save the message pair
+                                insert_query = text("""
+                                    INSERT INTO competitive_pricing_chat_memory 
+                                    (user_id, session_id, user_message, ai_message, created_at)
+                                    VALUES (:user_id, :session_id, :user_message, :ai_message, CURRENT_TIMESTAMP)
+                                """)
+                                
+                                db_session.execute(insert_query, {
+                                    "user_id": user_id,
+                                    "session_id": session_id,
+                                    "user_message": json.dumps({"role": "user", "content": message}),
+                                    "ai_message": json.dumps({"role": "assistant", "content": full_response})
+                                })
+                                db_session.commit()
+                                print(f"Successfully saved message for session {session_id}")
+                                
+                                # Verify it was saved
+                                check_query = text("""
+                                    SELECT COUNT(*) as count 
+                                    FROM competitive_pricing_chat_memory 
+                                    WHERE session_id = :session_id AND user_id = :user_id
+                                """)
+                                result = db_session.execute(check_query, {
+                                    "session_id": session_id,
+                                    "user_id": user_id
+                                })
+                                count = result.scalar()
+                                print(f"Total messages in DB for session {session_id}: {count}")
+                        except Exception as e:
+                            print(f"Error saving message: {e}")
+                            import traceback
+                            traceback.print_exc()
                     else:
                         # Non-streaming response
+                        response_content = stream.content if hasattr(stream, 'content') else str(stream)
                         await manager.send_message(
                             json.dumps({
                                 "type": "response",
-                                "content": stream.content if hasattr(stream, 'content') else str(stream)
+                                "content": response_content
                             }),
                             client_id
                         )
+                        
+                        # Manually save the message to our table
+                        print(f"Manually saving non-streaming message for session {session_id}")
+                        try:
+                            from sqlalchemy import create_engine, text
+                            from sqlalchemy.orm import sessionmaker
+                            save_engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
+                            SaveSession = sessionmaker(bind=save_engine)
+                            with SaveSession() as db_session:
+                                insert_query = text("""
+                                    INSERT INTO competitive_pricing_chat_memory 
+                                    (user_id, session_id, user_message, ai_message, created_at)
+                                    VALUES (:user_id, :session_id, :user_message, :ai_message, CURRENT_TIMESTAMP)
+                                """)
+                                
+                                db_session.execute(insert_query, {
+                                    "user_id": user_id,
+                                    "session_id": session_id,
+                                    "user_message": json.dumps({"role": "user", "content": message}),
+                                    "ai_message": json.dumps({"role": "assistant", "content": response_content})
+                                })
+                                db_session.commit()
+                                print(f"Successfully saved non-streaming message for session {session_id}")
+                        except Exception as e:
+                            print(f"Error saving non-streaming message: {e}")
                 except Exception as e:
                     import traceback
                     error_details = traceback.format_exc()
