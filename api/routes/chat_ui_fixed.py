@@ -146,7 +146,10 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
             db=PostgresMemoryDb(
                 table_name="competitive_pricing_chat_memory",
                 db_url=db_url,
-            )
+            ),
+            # Don't clear memories - we want to persist them
+            delete_memories=False,
+            clear_memories=False,
         ),
         "instructions": instructions,
         "markdown": True,
@@ -155,6 +158,9 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         "add_history_to_messages": True,
         "num_history_runs": 3,
         "show_tool_calls": True,
+        # Enable memory features
+        "enable_agentic_memory": True,
+        "read_chat_history": True,
     }
     
     # Add knowledge base if initialized
@@ -1082,7 +1088,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         with DebugSession() as db_session:
                             check_query = text("""
                                 SELECT COUNT(*) as count 
-                                FROM competitive_pricing_chat_memory 
+                                FROM ai.competitive_pricing_chat_memory 
                                 WHERE session_id = :session_id AND user_id = :user_id
                             """)
                             result = db_session.execute(check_query, {

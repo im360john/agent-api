@@ -1,0 +1,25 @@
+--- a/agents/competitive_pricing_agent.py
++++ b/agents/competitive_pricing_agent.py
+@@ -2240,8 +2240,8 @@ def get_competitive_pricing_agent(
+         memory=Memory(
+             model=OpenAIChat(id=model_id),
+-            db=PostgresMemoryDb(table_name="competitive_pricing_memories", db_url=db_url),
+-            delete_memories=True,
+-            clear_memories=True,
++            db=PostgresMemoryDb(table_name="competitive_pricing_chat_memory", db_url=db_url),
++            delete_memories=False,  # Keep memories for persistence
++            clear_memories=False,   # Don't clear memories on init
+         ),
+         enable_agentic_memory=True,
+
+--- a/api/routes/chat_ui_fixed.py
++++ b/api/routes/chat_ui_fixed.py
+@@ -149,8 +149,8 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
+                 db_url=db_url,
+             ),
+             # Don't clear memories - we want to persist them
+-            delete_memories=False,
+-            clear_memories=False,
++            delete_memories=False,  # Already correct
++            clear_memories=False,   # Already correct
+         ),
