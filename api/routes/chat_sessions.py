@@ -9,7 +9,6 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from db.session import db_url
-from agno.storage.agent.postgres import PostgresAgentStorage
 
 # Create router
 sessions_router = APIRouter(prefix="/chat/sessions", tags=["Chat Sessions"])
@@ -17,12 +16,6 @@ sessions_router = APIRouter(prefix="/chat/sessions", tags=["Chat Sessions"])
 # Database setup for custom queries
 engine = create_engine(db_url.replace('+asyncpg', '').replace('+aiopg', ''))
 Session = sessionmaker(bind=engine)
-
-# Agent storage for session management
-agent_storage = PostgresAgentStorage(
-    table_name="competitive_pricing_chat_agents",
-    db_url=db_url
-)
 
 
 class SessionInfo(BaseModel):
@@ -57,63 +50,98 @@ async def list_user_sessions(
     List all sessions for a user using agno's storage.
     """
     try:
-        # Get sessions from agno's storage
-        agent_sessions = agent_storage.get_all_sessions(
-            user_id=user_id,
-            limit=limit
-        )
+        # Since get_all_sessions might not exist, query the database directly
+        with Session() as db_session:
+            # Get unique sessions for the user from the memory table
+            query = text("""
+                SELECT DISTINCT 
+                    session_id,
+                    user_id,
+                    MIN(created_at) as created_at,
+                    MAX(created_at) as last_message_at,
+                    COUNT(*) as message_count
+                FROM competitive_pricing_chat_memory
+                WHERE user_id = :user_id
+                GROUP BY session_id, user_id
+                ORDER BY MAX(created_at) DESC
+                LIMIT :limit
+                OFFSET :offset
+            """)
+            
+            result = db_session.execute(query, {
+                "user_id": user_id,
+                "limit": limit,
+                "offset": offset
+            })
+            
+            sessions = result.fetchall()
         
-        # Convert agent sessions to our SessionInfo format
+        # Convert to our SessionInfo format
         session_infos = []
         
-        for agent_session in agent_sessions:
-            # Get message count and content from memory table
+        for session_row in sessions:
+            session_id, user_id, created_at, last_message_at, message_count = session_row
+            
+            # Get first and last messages for this session
             with Session() as db_session:
-                query = text("""
+                message_query = text("""
+                    WITH ordered_messages AS (
+                        SELECT 
+                            user_message,
+                            ai_message,
+                            created_at,
+                            ROW_NUMBER() OVER (ORDER BY created_at ASC) as rn_asc,
+                            ROW_NUMBER() OVER (ORDER BY created_at DESC) as rn_desc
+                        FROM competitive_pricing_chat_memory
+                        WHERE user_id = :user_id AND session_id = :session_id
+                    )
                     SELECT 
-                        COUNT(*) as message_count,
-                        MIN(created_at) as created_at,
-                        MAX(created_at) as last_message_at,
-                        FIRST_VALUE(ai_message) OVER (ORDER BY created_at) as first_message,
-                        LAST_VALUE(ai_message) OVER (ORDER BY created_at 
-                            ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) as last_message
-                    FROM competitive_pricing_chat_memory
-                    WHERE user_id = :user_id AND session_id = :session_id
-                    GROUP BY ai_message, created_at
-                    LIMIT 1
+                        MAX(CASE WHEN rn_asc = 1 THEN user_message END) as first_message,
+                        MAX(CASE WHEN rn_desc = 1 THEN ai_message END) as last_message
+                    FROM ordered_messages
                 """)
                 
-                result = db_session.execute(query, {
+                msg_result = db_session.execute(message_query, {
                     "user_id": user_id,
-                    "session_id": agent_session.session_id
+                    "session_id": session_id
                 })
                 
-                row = result.first()
-                if row:
-                    session_infos.append(SessionInfo(
-                        session_id=agent_session.session_id,
-                        user_id=user_id,
-                        created_at=row.created_at or agent_session.created_at,
-                        last_message_at=row.last_message_at or agent_session.updated_at,
-                        message_count=row.message_count or 0,
-                        first_message=row.first_message,
-                        last_message=row.last_message
-                    ))
-                else:
-                    # No messages yet, use agent session data
-                    session_infos.append(SessionInfo(
-                        session_id=agent_session.session_id,
-                        user_id=user_id,
-                        created_at=agent_session.created_at,
-                        last_message_at=agent_session.updated_at,
-                        message_count=0,
-                        first_message=None,
-                        last_message=None
-                    ))
+                msg_row = msg_result.first()
+                first_msg = None
+                last_msg = None
+                
+                if msg_row:
+                    # Parse JSON messages if needed
+                    if msg_row[0]:
+                        try:
+                            first_data = json.loads(msg_row[0]) if isinstance(msg_row[0], str) else msg_row[0]
+                            first_msg = first_data.get('content', str(first_data)) if isinstance(first_data, dict) else str(first_data)
+                        except:
+                            first_msg = str(msg_row[0])
+                    
+                    if msg_row[1]:
+                        try:
+                            last_data = json.loads(msg_row[1]) if isinstance(msg_row[1], str) else msg_row[1]
+                            last_msg = last_data.get('content', str(last_data)) if isinstance(last_data, dict) else str(last_data)
+                        except:
+                            last_msg = str(msg_row[1])
+                
+                session_infos.append(SessionInfo(
+                    session_id=session_id,
+                    user_id=user_id,
+                    created_at=created_at,
+                    last_message_at=last_message_at,
+                    message_count=message_count,
+                    first_message=first_msg,
+                    last_message=last_msg
+                ))
         
         return session_infos
             
     except Exception as e:
+        import traceback
+        print(f"Error in list_user_sessions: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error retrieving sessions: {str(e)}")
 
 

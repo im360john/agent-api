@@ -628,6 +628,9 @@ CHAT_HTML = """
         localStorage.setItem('chatUserId', currentUserId);
         localStorage.setItem('currentSessionId', currentSessionId);
         
+        console.log('Current user ID:', currentUserId);
+        console.log('Current session ID:', currentSessionId);
+        
         // Model selection
         const modelSelect = document.getElementById('modelSelect');
         let currentModel = localStorage.getItem('selectedModel') || 'claude-sonnet-4-20250514';
@@ -785,10 +788,23 @@ CHAT_HTML = """
         async function loadSessions() {
             try {
                 const response = await fetch(`/chat/sessions/?user_id=${currentUserId}`);
+                console.log('Session fetch response status:', response.status);
+                
+                if (!response.ok) {
+                    console.error('Session fetch failed:', response.status, response.statusText);
+                    return;
+                }
+                
                 const sessions = await response.json();
+                console.log('Sessions loaded:', sessions);
                 
                 const sessionsList = document.getElementById('sessionsList');
                 sessionsList.innerHTML = '';
+                
+                if (!sessions || sessions.length === 0) {
+                    sessionsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No previous conversations</div>';
+                    return;
+                }
                 
                 sessions.forEach(session => {
                     const sessionDiv = document.createElement('div');
@@ -914,13 +930,15 @@ CHAT_HTML = """
             const message = messageInput.value.trim();
             if (message && !sendButton.disabled && isConnected) {
                 addMessage(message, 'user');
-                ws.send(JSON.stringify({
+                const messageData = {
                     type: 'message',
                     content: message,
                     user_id: currentUserId,
                     session_id: currentSessionId,
                     model_id: currentModel
-                }));
+                };
+                console.log('Sending message with data:', messageData);
+                ws.send(JSON.stringify(messageData));
                 messageInput.value = '';
                 sendButton.disabled = true;
                 typingIndicator.classList.add('active');
@@ -1008,6 +1026,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 try:
                     # Get agent with selected model
                     agent = get_agent(model_id)
+                    
+                    print(f"Running agent with user_id={user_id}, session_id={session_id}, model_id={model_id}")
                     
                     # Use async run method with streaming
                     stream = await agent.arun(
