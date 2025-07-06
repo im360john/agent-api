@@ -156,8 +156,8 @@ def create_pricing_agent(model_id: str = "claude-sonnet-4-20250514") -> Agent:
         # Enable history and context awareness
         "add_datetime_to_instructions": True,
         # Disable history since we're not using memory
-        "add_history_to_messages": False,
-        "num_history_runs": 0,
+        "add_history_to_messages": True,
+        "num_history_runs": 4,
         "show_tool_calls": True,
     }
     
