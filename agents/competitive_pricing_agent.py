@@ -1329,10 +1329,22 @@ class CompetitorPricingTools(Toolkit):
             from agno.agent import Agent
             from agno.models.anthropic import Claude
             
+            # Initialize BrowserbaseTools properly
+            bb_api_key = os.getenv("BROWSERBASE_API_KEY", self.browserbase_key)
+            bb_project_id = os.getenv("BROWSERBASE_PROJECT_ID", self.browserbase_project)
+            
+            print(f"    Browserbase API Key: {'Set' if bb_api_key else 'Missing'}")
+            print(f"    Browserbase Project ID: {'Set' if bb_project_id else 'Missing'}")
+            
+            browserbase_tool = BrowserbaseTools(
+                api_key=bb_api_key,
+                project_id=bb_project_id
+            )
+            
             agent = Agent(
                 name="Price Extractor",
                 model=Claude(api_key=os.getenv("ANTHROPIC_API_KEY")),
-                tools=[BrowserbaseTools()],
+                tools=[browserbase_tool],
                 instructions=[
                     "You are a price extraction assistant for cannabis products.",
                     "Navigate to websites and find specific product prices.",
