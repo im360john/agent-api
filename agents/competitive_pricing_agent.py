@@ -1354,17 +1354,30 @@ class CompetitorPricingTools(Toolkit):
                     "You are a cannabis product price extraction specialist.",
                     "Your task is to navigate dispensary websites and find specific products.",
                     "",
-                    "IMPORTANT SEARCH STRATEGIES:",
-                    "1. First try to find and use the site's search functionality",
-                    "2. Look for search boxes, magnifying glass icons, or 'Search' buttons",
-                    "3. If no search box, look for product categories like 'Edibles', 'Gummies', etc.",
-                    "4. Check if there's a menu or products page",
-                    "5. Be patient - pages may take time to load",
+                    "CRITICAL: DISPENSARY WEBSITES OFTEN REQUIRE:",
+                    "1. Age verification (21+ confirmation)",
+                    "2. Location/store selection", 
+                    "3. Navigation through menus to reach products",
                     "",
-                    "When searching:",
-                    "- Try variations: 'Wyld Strawberry', 'Wyld Strawberry Gummies', just 'Wyld'",
-                    "- Look for brand sections or filters",
-                    "- Check multiple pages of results if paginated",
+                    "NAVIGATION WORKFLOW:",
+                    "1. Handle any age gates or verification prompts first",
+                    "2. Select store location if prompted (match competitor name or pick first)",
+                    "3. Navigate to the shop/menu/products section",
+                    "4. Use search if available, otherwise browse categories",
+                    "5. Apply relevance scoring when matching products",
+                    "",
+                    "SEARCH STRATEGIES:",
+                    "- Try multiple search terms: full name, brand only, partial product name",
+                    "- Look for search boxes, magnifying glass icons, or 'Search' buttons",
+                    "- Browse categories like 'Edibles', 'Gummies' if no search available",
+                    "- Check brand filters or sections",
+                    "- Navigate through multiple pages of results",
+                    "",
+                    "PRODUCT MATCHING:",
+                    "- Exact matches are best",
+                    "- Close matches are acceptable (e.g., 'Wyld Strawberry 10pk' = 'Wyld Strawberry Gummies')",
+                    "- Focus on brand + key product identifiers",
+                    "- Consider variations in naming (Gummies vs Gummy, 10-pack vs 10pk)",
                     "",
                     "Extract ALL of the following if found:",
                     "- Product name (exactly as shown on page)",
@@ -1385,29 +1398,65 @@ class CompetitorPricingTools(Toolkit):
             # Build search query
             search_query = f"{brand} {product_name}".strip() if brand else product_name
             
+            # Extract location from competitor name if present
+            competitor_name = competitor_url.split('/')[-2] if competitor_url.endswith('/') else competitor_url.split('/')[-1]
+            location_hint = ""
+            
+            # Common location patterns in competitor names
+            location_keywords = ["San Jose", "Oakland", "San Francisco", "Berkeley", "Sacramento", "Los Angeles", "San Diego"]
+            for location in location_keywords:
+                if location.lower() in competitor_name.lower() or location.lower() in competitor_url.lower():
+                    location_hint = f" (likely location: {location})"
+                    break
+            
             # Create prompt for the agent
             prompt = f"""
 Navigate to {competitor_url} and find the price for "{search_query}".
 
-STEP-BY-STEP APPROACH:
+CRITICAL DISPENSARY WEBSITE NAVIGATION STEPS:
+
 1. First, navigate to the URL using navigate_to()
 2. Wait for the page to load, then use extract_text() to see what's on the page
-3. Look for a search functionality:
-   - Search box (try searching for "{search_query}", "{brand}", or "{product_name}")
-   - Click on search buttons or magnifying glass icons
-   - Fill search fields and submit
-4. If no search, try navigating through menus:
-   - Look for "Shop", "Menu", "Products", "Edibles", or "Gummies" links
-   - Click on relevant categories
-5. Once you find products, look for the specific one matching "{search_query}"
-6. Click on the product if needed to see details
-7. Extract all pricing and product information
 
-IMPORTANT:
-- Take your time, pages need to load
-- If you don't find it immediately, try different search terms
-- Look through multiple pages of results
-- Use extract_text() frequently to understand what's on the page
+3. HANDLE AGE VERIFICATION (if present):
+   - Look for age gates, "Are you 21+?", "Verify Age", or similar prompts
+   - Click "Yes", "I am 21+", "Enter", or similar confirmation buttons
+   - Some sites may have checkboxes to check before proceeding
+
+4. HANDLE LOCATION SELECTION (if required):
+   - Look for location prompts, store selectors, or "Choose Location"
+   - If the competitor name includes a location (e.g., "Harborside San Jose"), select that location{location_hint}
+   - Otherwise, select the first available location
+   - Click "Continue", "Shop", or similar to proceed to the menu
+
+5. NAVIGATE TO PRODUCT MENU:
+   - After age/location verification, look for "Shop", "Menu", "Order", or "Products" links
+   - Click to enter the product catalog
+
+6. SEARCH FOR THE PRODUCT:
+   - Look for a search box, search icon (🔍), or "Search" button
+   - Try searching for:
+     a) Full query: "{search_query}"
+     b) Just brand: "{brand}" 
+     c) Partial product: "{product_name}"
+   - If no search, browse categories like "Edibles", "Gummies", etc.
+
+7. FIND MATCHING PRODUCTS:
+   - Look through search results for products matching "{search_query}"
+   - Consider close matches if exact match not found:
+     - Same brand + similar product name
+     - Focus on key words: "{brand}" and main product type
+   - Check multiple pages if results are paginated
+
+8. EXTRACT PRODUCT DETAILS:
+   - Click on the product if needed for full details
+   - Extract all available information
+
+IMPORTANT TIPS:
+- Be patient - each page/popup may take time to load
+- Use extract_text() after each navigation to understand the page
+- If stuck, try screenshot() to see what's on screen
+- Relevance scoring: A "Wyld Strawberry 10pk" matches "Wyld Strawberry Gummies"
 
 Once you find the product (or confirm it's not available), return:
 PRODUCT_NAME: [exact name as shown, or "NOT FOUND"]
@@ -1469,12 +1518,20 @@ And explain what you tried."""
                     return match.group(1).strip() if match else default
                 
                 # Check if the agent found the product
-                if "could not find" in content.lower() or "not found" in content.lower() or "no results" in content.lower():
+                product_name_found = extract_field(r'PRODUCT_NAME:\s*(.+)', content, "")
+                
+                # More nuanced check for product not found
+                if (product_name_found.upper() == "NOT FOUND" or 
+                    (not product_name_found and ("could not find" in content.lower() or 
+                                                "not found" in content.lower() or 
+                                                "no results" in content.lower()))):
                     print(f"    Agent indicated product not found")
                     print(f"    Full agent response:\n{content}")
                     return None
                 
-                product_name_found = extract_field(r'PRODUCT_NAME:\s*(.+)', content, search_query)
+                # If no product name extracted, use the search query as fallback
+                if not product_name_found:
+                    product_name_found = search_query
                 regular_price = extract_field(r'REGULAR_PRICE:\s*\$?(\d+\.?\d*)', content)
                 member_price = extract_field(r'MEMBER_PRICE:\s*\$?(\d+\.?\d*)', content)
                 thc_content = extract_field(r'THC_CONTENT:\s*(.+)', content)
