@@ -1318,7 +1318,10 @@ class CompetitorPricingTools(Toolkit):
         Returns:
             List of potential product URLs found
         """
-        print(f"    Browserbase fallback: searching {competitor_url} for {brand} {product_name}")
+        print(f"    === BROWSERBASE SEARCH START ===")
+        print(f"    Competitor URL: {competitor_url}")
+        print(f"    Search query: {product_name}")
+        print(f"    Brand: {brand if brand else '(empty)'}")
         
         try:
             import httpx
@@ -1333,6 +1336,7 @@ class CompetitorPricingTools(Toolkit):
             # Create session
             async with httpx.AsyncClient() as client:
                 # Start session
+                print(f"    Creating Browserbase session for URL: {competitor_url}")
                 session_response = await client.post(
                     "https://api.browserbase.com/v1/sessions",
                     headers=headers,
@@ -1344,17 +1348,23 @@ class CompetitorPricingTools(Toolkit):
                 )
                 
                 if session_response.status_code != 201:
-                    print(f"    Failed to create Browserbase session: {session_response.status_code}")
+                    print(f"    ERROR: Failed to create Browserbase session")
+                    print(f"    Status code: {session_response.status_code}")
+                    print(f"    Response: {await session_response.text()}")
                     return []
                 
                 session_data = session_response.json()
                 session_id = session_data.get("id")
                 
                 if not session_id:
-                    print("    No session ID returned")
+                    print("    ERROR: No session ID returned from Browserbase")
+                    print(f"    Session data: {session_data}")
                     return []
                 
+                print(f"    Session created successfully: {session_id}")
+                
                 # Wait for page to load
+                print(f"    Waiting 3 seconds for page to load...")
                 await asyncio.sleep(3)
                 
                 # Try to find and use search functionality
@@ -1371,9 +1381,13 @@ class CompetitorPricingTools(Toolkit):
                 ]
                 
                 # Execute search
-                search_term = f"{brand} {product_name}".strip()
+                search_term = f"{brand} {product_name}".strip() if brand else product_name.strip()
                 simplified_search = ' '.join(search_term.split()[:3])  # Use first 3 words
                 
+                print(f"    Searching for: '{search_term}'")
+                print(f"    Simplified search: '{simplified_search}'")
+                
+                search_found = False
                 for selector in search_selectors:
                     try:
                         # Try to find and fill search input
@@ -1410,18 +1424,29 @@ class CompetitorPricingTools(Toolkit):
                         if exec_response.status_code == 200:
                             result = exec_response.json()
                             if result.get("value") == True:
-                                print(f"    Found search box with selector: {selector}")
+                                print(f"    SUCCESS: Found search box with selector: {selector}")
+                                search_found = True
+                                print(f"    Waiting 5 seconds for search results...")
                                 await asyncio.sleep(5)  # Wait for search results
                                 break
+                            else:
+                                print(f"    No search box found with selector: {selector}")
+                        else:
+                            print(f"    ERROR executing script for selector {selector}: {exec_response.status_code}")
                     except Exception as e:
+                        print(f"    Exception with selector {selector}: {str(e)}")
                         continue
                 
-                # Extract product URLs from search results
+                if not search_found:
+                    print(f"    WARNING: No search box found on {competitor_url}")
+                    print(f"    Tried selectors: {search_selectors}")
+                
+                # Extract product URLs from search results (even if no search was performed)
                 extract_script = f"""
                 const links = Array.from(document.querySelectorAll('a'));
                 const productData = [];
-                const brandLower = '{brand.lower()}';
-                const searchTerms = '{brand} {product_name}'.toLowerCase();
+                const brandLower = '{brand.lower() if brand else ""}';
+                const searchTerms = '{search_term}'.toLowerCase();
                 
                 links.forEach(link => {{
                     const href = link.href;
@@ -1434,8 +1459,12 @@ class CompetitorPricingTools(Toolkit):
                         return;
                     }}
                     
-                    // Check if link contains brand
-                    if (hrefLower.includes(brandLower) || text.includes(brandLower)) {{
+                    // Check if link is relevant - if brand is empty, check for search terms in URL/text
+                    const isRelevant = brandLower ? 
+                        (hrefLower.includes(brandLower) || text.includes(brandLower)) :
+                        (searchTerms.split(' ').some(term => term.length > 2 && (hrefLower.includes(term) || text.includes(term))));
+                    
+                    if (isRelevant) {{
                         productData.push({{
                             url: href,
                             text: text,
@@ -1463,10 +1492,12 @@ class CompetitorPricingTools(Toolkit):
                     MIN_MATCH_SCORE = 0.5  # Minimum 50% match
                     scored_results = []
                     
+                    print(f"    Found {len(product_data)} potential product links")
+                    
                     for item in product_data:
                         if isinstance(item, dict):
                             score = self._calculate_match_score(
-                                f"{brand} {product_name}",
+                                search_term,
                                 item.get('text', '')
                             )
                             if score >= MIN_MATCH_SCORE:
@@ -1481,13 +1512,18 @@ class CompetitorPricingTools(Toolkit):
                         print(f"    All {len(product_data)} results scored below threshold ({MIN_MATCH_SCORE})")
                     else:
                         print(f"    Browserbase found {len(urls)} matching URLs")
+                else:
+                    print(f"    ERROR: Failed to extract URLs. Status: {extract_response.status_code}")
+                    print(f"    Response: {await extract_response.text()}")
                 
                 # Clean up session
+                print(f"    Cleaning up Browserbase session {session_id}")
                 await client.delete(
                     f"https://api.browserbase.com/v1/sessions/{session_id}",
                     headers=headers
                 )
                 
+                print(f"    === BROWSERBASE SEARCH END ===")
                 return urls
                 
         except Exception as e:
@@ -1585,22 +1621,23 @@ class CompetitorPricingTools(Toolkit):
                     base_query = ' '.join(base_words)
                     search_queries.append(base_query)
             
-            # Try searching with each query variant
+            # Try searching with each query variant - Browserbase first, then Google
             all_urls = []
             for query in search_queries:
                 # Don't extract brand since query already contains it
                 # This avoids duplicating the brand in search
-                print(f"    Searching URLs for query='{query}'")
-                query_urls = await self.search_product_urls(query, "", competitor_url)
-                print(f"    Found {len(query_urls)} URLs")
+                print(f"    Searching for query='{query}' at {competitor_url}")
                 
-                # If Google returns 0 results, try browserbase fallback
-                if not query_urls:
-                    print(f"    Google returned 0 results, trying Browserbase fallback...")
-                    # Pass empty string for brand since query already contains it
-                    query_urls = await self._browserbase_search_fallback(competitor_url, "", query)
-                    if query_urls:
-                        print(f"    Browserbase found {len(query_urls)} URLs")
+                # Try Browserbase first
+                print(f"    Attempting Browserbase search...")
+                query_urls = await self._browserbase_search_fallback(competitor_url, "", query)
+                
+                if query_urls:
+                    print(f"    Browserbase found {len(query_urls)} URLs")
+                else:
+                    print(f"    Browserbase returned 0 results, trying Google search fallback...")
+                    query_urls = await self.search_product_urls(query, "", competitor_url)
+                    print(f"    Google search found {len(query_urls)} URLs")
                 
                 if query_urls:
                     all_urls.extend(query_urls)
