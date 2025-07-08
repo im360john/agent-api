@@ -25,11 +25,17 @@ from agno.tools.reasoning import ReasoningTools
 
 # Try to import BrowserbaseTools, but make it optional
 try:
-    from agno.tools.browserbase import BrowserbaseTools
+    # Try our local implementation first
+    from agents.browserbase_tools import BrowserbaseTools
     BROWSERBASE_AVAILABLE = True
 except ImportError:
-    BROWSERBASE_AVAILABLE = False
-    BrowserbaseTools = None
+    try:
+        # Fallback to agno's implementation
+        from agno.tools.browserbase import BrowserbaseTools
+        BROWSERBASE_AVAILABLE = True
+    except ImportError:
+        BROWSERBASE_AVAILABLE = False
+        BrowserbaseTools = None
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -3112,13 +3118,11 @@ def get_competitive_pricing_agent(
     
     if BROWSERBASE_AVAILABLE:
         try:
-            # Ensure environment variables are set
-            if not os.getenv("BROWSERBASE_API_KEY"):
-                os.environ["BROWSERBASE_API_KEY"] = pricing_tools.browserbase_key
-            if not os.getenv("BROWSERBASE_PROJECT_ID"):
-                os.environ["BROWSERBASE_PROJECT_ID"] = pricing_tools.browserbase_project
-            
-            browserbase_tools = BrowserbaseTools()
+            # Pass credentials directly to BrowserbaseTools
+            browserbase_tools = BrowserbaseTools(
+                api_key=pricing_tools.browserbase_key,
+                project_id=pricing_tools.browserbase_project
+            )
             tools_list.append(browserbase_tools)
             print("BrowserbaseTools added to agent")
         except Exception as e:
