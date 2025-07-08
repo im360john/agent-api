@@ -1254,8 +1254,10 @@ class CompetitorPricingTools(Toolkit):
             List of potential product URLs
         """
         try:
-            # Use Google search with site: operator for better results
-            search_query = f'site:{competitor_url} "{brand}" "{product_name}"'
+            # Clean up competitor URL for site: operator (remove trailing slash)
+            clean_url = competitor_url.rstrip('/')
+            # Use Google search with site: operator - no quotes for better results
+            search_query = f'site:{clean_url} {brand} {product_name}'
             print(f"      Google search query: {search_query}")
             
             headers = {
@@ -1298,6 +1300,222 @@ class CompetitorPricingTools(Toolkit):
         except Exception as e:
             print(f"Error searching URLs: {e}")
             return []
+    
+    async def _browserbase_search_fallback(self, competitor_url: str, brand: str, 
+                                          product_name: str) -> List[str]:
+        """
+        Use Browserbase to navigate to site and search for product.
+        
+        Args:
+            competitor_url: Base URL of competitor site
+            brand: Brand name
+            product_name: Product to search for
+            
+        Returns:
+            List of potential product URLs found
+        """
+        print(f"    Browserbase fallback: searching {competitor_url} for {brand} {product_name}")
+        
+        try:
+            import httpx
+            from urllib.parse import urljoin
+            
+            # Start a Browserbase session
+            headers = {
+                "X-BB-API-Key": self.browserbase_key,
+                "Content-Type": "application/json"
+            }
+            
+            # Create session
+            async with httpx.AsyncClient() as client:
+                # Start session
+                session_response = await client.post(
+                    "https://api.browserbase.com/v1/sessions",
+                    headers=headers,
+                    json={
+                        "projectId": self.browserbase_project,
+                        "url": competitor_url
+                    },
+                    timeout=30.0
+                )
+                
+                if session_response.status_code != 201:
+                    print(f"    Failed to create Browserbase session: {session_response.status_code}")
+                    return []
+                
+                session_data = session_response.json()
+                session_id = session_data.get("id")
+                
+                if not session_id:
+                    print("    No session ID returned")
+                    return []
+                
+                # Wait for page to load
+                await asyncio.sleep(3)
+                
+                # Try to find and use search functionality
+                # Common search selectors
+                search_selectors = [
+                    'input[type="search"]',
+                    'input[placeholder*="search" i]',
+                    'input[placeholder*="product" i]',
+                    'input[name*="search" i]',
+                    'input[name="q"]',
+                    'input.search',
+                    '#search',
+                    '.search-input'
+                ]
+                
+                # Execute search
+                search_term = f"{brand} {product_name}".strip()
+                simplified_search = ' '.join(search_term.split()[:3])  # Use first 3 words
+                
+                for selector in search_selectors:
+                    try:
+                        # Try to find and fill search input
+                        script = f"""
+                        const searchInput = document.querySelector('{selector}');
+                        if (searchInput) {{
+                            searchInput.value = '{simplified_search}';
+                            searchInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            
+                            // Try to submit form
+                            const form = searchInput.closest('form');
+                            if (form) {{
+                                form.submit();
+                            }} else {{
+                                // Try Enter key
+                                searchInput.dispatchEvent(new KeyboardEvent('keypress', {{
+                                    key: 'Enter',
+                                    keyCode: 13,
+                                    bubbles: true
+                                }}));
+                            }}
+                            return true;
+                        }}
+                        return false;
+                        """
+                        
+                        exec_response = await client.post(
+                            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                            headers=headers,
+                            json={"script": script},
+                            timeout=10.0
+                        )
+                        
+                        if exec_response.status_code == 200:
+                            result = exec_response.json()
+                            if result.get("value") == True:
+                                print(f"    Found search box with selector: {selector}")
+                                await asyncio.sleep(5)  # Wait for search results
+                                break
+                    except Exception as e:
+                        continue
+                
+                # Extract product URLs from search results
+                extract_script = f"""
+                const links = Array.from(document.querySelectorAll('a'));
+                const productData = [];
+                const brandLower = '{brand.lower()}';
+                const searchTerms = '{brand} {product_name}'.toLowerCase();
+                
+                links.forEach(link => {{
+                    const href = link.href;
+                    const text = (link.textContent || '').toLowerCase();
+                    const hrefLower = href.toLowerCase();
+                    
+                    // Skip non-product pages
+                    if (href.includes('/search') || href.includes('?q=') || 
+                        href.includes('/category') || href.includes('/collections')) {{
+                        return;
+                    }}
+                    
+                    // Check if link contains brand
+                    if (hrefLower.includes(brandLower) || text.includes(brandLower)) {{
+                        productData.push({{
+                            url: href,
+                            text: text,
+                            searchTerms: searchTerms
+                        }});
+                    }}
+                }});
+                
+                return productData;
+                """
+                
+                extract_response = await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": extract_script},
+                    timeout=10.0
+                )
+                
+                urls = []
+                if extract_response.status_code == 200:
+                    result = extract_response.json()
+                    product_data = result.get("value", [])
+                    
+                    # Score and filter results
+                    MIN_MATCH_SCORE = 0.5  # Minimum 50% match
+                    scored_results = []
+                    
+                    for item in product_data:
+                        if isinstance(item, dict):
+                            score = self._calculate_match_score(
+                                f"{brand} {product_name}",
+                                item.get('text', '')
+                            )
+                            if score >= MIN_MATCH_SCORE:
+                                scored_results.append((score, item['url']))
+                                print(f"      Match: {item.get('text', '')[:60]}... (score: {score:.2f})")
+                    
+                    # Sort by score and take top results
+                    scored_results.sort(reverse=True, key=lambda x: x[0])
+                    urls = [url for _, url in scored_results[:5]]
+                    
+                    if not urls and product_data:
+                        print(f"    All {len(product_data)} results scored below threshold ({MIN_MATCH_SCORE})")
+                    else:
+                        print(f"    Browserbase found {len(urls)} matching URLs")
+                
+                # Clean up session
+                await client.delete(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}",
+                    headers=headers
+                )
+                
+                return urls
+                
+        except Exception as e:
+            print(f"    Browserbase search error: {e}")
+            return []
+    
+    def _calculate_match_score(self, search_terms: str, found_text: str) -> float:
+        """
+        Calculate how well found text matches search terms.
+        Returns a score between 0 and 1.
+        """
+        search_words = set(search_terms.lower().split())
+        found_words = set(found_text.lower().split())
+        
+        if not search_words:
+            return 0.0
+        
+        # Count matching words
+        matches = search_words.intersection(found_words)
+        
+        # Calculate base score (percentage of search words found)
+        base_score = len(matches) / len(search_words)
+        
+        # Bonus for exact substring match
+        if search_terms.lower() in found_text.lower():
+            base_score = min(1.0, base_score + 0.3)
+        
+        # Penalty for too many extra words (might be wrong product)
+        if len(found_words) > len(search_words) * 3:
+            base_score *= 0.8
+        
+        return base_score
     
     def _is_relevant_product_url(self, url: str, brand: str, product_name: str) -> bool:
         """Check if URL is likely a relevant product page"""
@@ -1378,6 +1596,14 @@ class CompetitorPricingTools(Toolkit):
                 print(f"    Searching URLs for brand='{brand}', product='{product}'")
                 query_urls = await self.search_product_urls(product, brand, competitor_url)
                 print(f"    Found {len(query_urls)} URLs")
+                
+                # If Google returns 0 results, try browserbase fallback
+                if not query_urls:
+                    print(f"    Google returned 0 results, trying Browserbase fallback...")
+                    query_urls = await self._browserbase_search_fallback(competitor_url, brand, product)
+                    if query_urls:
+                        print(f"    Browserbase found {len(query_urls)} URLs")
+                
                 if query_urls:
                     all_urls.extend(query_urls)
             
@@ -1391,6 +1617,7 @@ class CompetitorPricingTools(Toolkit):
             
             if not urls:
                 print(f"    No product URLs found for {search_query} (or variants) at {competitor_name}")
+                # Return None to indicate product not found, which will result in "not_carried" status
                 return None
             
             print(f"    Final URLs to scrape: {urls}")
