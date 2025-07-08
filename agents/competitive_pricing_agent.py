@@ -656,6 +656,12 @@ class CompetitorPricingTools(Toolkit):
         Returns:
             Formatted price comparison with freshness indicators
         """
+        print(f"\n=== check_prices called ===")
+        print(f"  product_name: {product_name}")
+        print(f"  brand: {brand}")
+        print(f"  competitor_names: {competitor_names}")
+        print(f"  force_refresh: {force_refresh}")
+        
         try:
             # Extract brand from product name if not provided separately
             known_brands = ['wyld', 'kiva', 'camino', 'plus', 'wana', 'jetty', 'stiiizy']
@@ -699,8 +705,15 @@ class CompetitorPricingTools(Toolkit):
                     query += " AND LOWER(brand) = :brand"
                     params["brand"] = (brand or detected_brand).lower()
                 
+                print(f"\n  Product search query: {query}")
+                print(f"  Product search params: {params}")
+                
                 result = session.execute(text(query), params)
                 products = result.fetchall()
+                
+                print(f"  Products found: {len(products)}")
+                for p in products:
+                    print(f"    - ID: {p[0]}, Brand: {p[2]}, Name: {p[1]}")
                 
                 # If no exact match, try fuzzy search with all words
                 if not products:
@@ -885,7 +898,13 @@ class CompetitorPricingTools(Toolkit):
                                     needs_refresh.append((product_id, prod_name, prod_brand, comp_id, comp_name))
                         
                         # Need to scrape fresh data
-                        search_query = f"{prod_brand} {prod_name}"
+                        # Avoid duplicating brand in search query if product name already contains it
+                        if prod_brand.lower() in prod_name.lower():
+                            search_query = prod_name
+                        else:
+                            search_query = f"{prod_brand} {prod_name}"
+                        
+                        print(f"\n  Scraping {comp_name} for '{search_query}'...")
                         # prod_meta is already a dict from the database JSONB column
                         scraped_data = await self._scrape_competitor_price(
                             comp_name, comp_urls[0], search_query, prod_meta if prod_meta else {}
@@ -1237,6 +1256,7 @@ class CompetitorPricingTools(Toolkit):
         try:
             # Use Google search with site: operator for better results
             search_query = f'site:{competitor_url} "{brand}" "{product_name}"'
+            print(f"      Google search query: {search_query}")
             
             headers = {
                 "X-API-KEY": "7eb754e913754229bd81b68109a9e5139342c334",  # Serper API key
@@ -1258,13 +1278,21 @@ class CompetitorPricingTools(Toolkit):
                         data = await response.json()
                         urls = []
                         
+                        print(f"      Google search returned {len(data.get('organic', []))} results")
+                        
                         for result in data.get("organic", []):
                             url = result.get("link", "")
-                            if url and self._is_relevant_product_url(url, brand, product_name):
-                                urls.append(url)
+                            if url:
+                                is_relevant = self._is_relevant_product_url(url, brand, product_name)
+                                print(f"      URL: {url[:80]}... - Relevant: {is_relevant}")
+                                if is_relevant:
+                                    urls.append(url)
                         
                         return urls
                     else:
+                        error_text = await response.text()
+                        print(f"      Google search failed with status: {response.status}")
+                        print(f"      Error: {error_text}")
                         return []
                         
         except Exception as e:
@@ -1308,6 +1336,11 @@ class CompetitorPricingTools(Toolkit):
         Returns:
             PriceData object or None
         """
+        print(f"\n  === _scrape_competitor_price called ===")
+        print(f"    competitor_name: {competitor_name}")
+        print(f"    competitor_url: {competitor_url}")
+        print(f"    search_query: {search_query}")
+        
         try:
             # For variant searches, also try base product name
             search_queries = [search_query]
@@ -1342,7 +1375,9 @@ class CompetitorPricingTools(Toolkit):
                     brand = ""
                     product = query
                 
+                print(f"    Searching URLs for brand='{brand}', product='{product}'")
                 query_urls = await self.search_product_urls(product, brand, competitor_url)
+                print(f"    Found {len(query_urls)} URLs")
                 if query_urls:
                     all_urls.extend(query_urls)
             
@@ -1355,8 +1390,10 @@ class CompetitorPricingTools(Toolkit):
                     urls.append(url)
             
             if not urls:
-                print(f"No product URLs found for {search_query} (or variants) at {competitor_name}")
+                print(f"    No product URLs found for {search_query} (or variants) at {competitor_name}")
                 return None
+            
+            print(f"    Final URLs to scrape: {urls}")
             
             # Try Firecrawl first on the top URL
             target_url = urls[0]
