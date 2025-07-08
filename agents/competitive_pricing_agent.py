@@ -1254,10 +1254,14 @@ class CompetitorPricingTools(Toolkit):
             List of potential product URLs
         """
         try:
-            # Clean up competitor URL for site: operator (remove trailing slash)
-            clean_url = competitor_url.rstrip('/')
+            # Extract domain from competitor URL for site: operator
+            parsed_url = urlparse(competitor_url)
+            domain = parsed_url.netloc
             # Use Google search with site: operator - no quotes for better results
-            search_query = f'site:{clean_url} {brand} {product_name}'
+            if brand:
+                search_query = f'site:{domain} {brand} {product_name}'
+            else:
+                search_query = f'site:{domain} {product_name}'
             print(f"      Google search query: {search_query}")
             
             headers = {
@@ -1584,23 +1588,17 @@ class CompetitorPricingTools(Toolkit):
             # Try searching with each query variant
             all_urls = []
             for query in search_queries:
-                # Extract brand and product name from query
-                parts = query.split()
-                if len(parts) > 1:
-                    brand = parts[0]
-                    product = ' '.join(parts[1:])
-                else:
-                    brand = ""
-                    product = query
-                
-                print(f"    Searching URLs for brand='{brand}', product='{product}'")
-                query_urls = await self.search_product_urls(product, brand, competitor_url)
+                # Don't extract brand since query already contains it
+                # This avoids duplicating the brand in search
+                print(f"    Searching URLs for query='{query}'")
+                query_urls = await self.search_product_urls(query, "", competitor_url)
                 print(f"    Found {len(query_urls)} URLs")
                 
                 # If Google returns 0 results, try browserbase fallback
                 if not query_urls:
                     print(f"    Google returned 0 results, trying Browserbase fallback...")
-                    query_urls = await self._browserbase_search_fallback(competitor_url, brand, product)
+                    # Pass empty string for brand since query already contains it
+                    query_urls = await self._browserbase_search_fallback(competitor_url, "", query)
                     if query_urls:
                         print(f"    Browserbase found {len(query_urls)} URLs")
                 
