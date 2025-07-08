@@ -99,9 +99,8 @@ async def list_user_sessions(
                         WHERE user_id = :user_id AND session_id = :session_id
                     )
                     SELECT 
-                        MAX(CASE WHEN rn_asc = 1 THEN user_message END) as first_message,
-                        MAX(CASE WHEN rn_desc = 1 THEN ai_message END) as last_message
-                    FROM ordered_messages
+                        (SELECT user_message FROM ordered_messages WHERE rn_asc = 1 LIMIT 1) as first_message,
+                        (SELECT ai_message FROM ordered_messages WHERE rn_desc = 1 LIMIT 1) as last_message
                 """)
                 
                 msg_result = db_session.execute(message_query, {
