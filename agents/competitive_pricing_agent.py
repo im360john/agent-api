@@ -1316,10 +1316,6 @@ class CompetitorPricingTools(Toolkit):
     async def _browserbase_search_and_extract_price_simple(self, competitor_url: str, brand: str, 
                                                           product_name: str) -> Optional[PriceData]:
         """Use BrowserbaseTools with an agent to search and extract price"""
-        if not BROWSERBASE_AVAILABLE:
-            print(f"    BrowserbaseTools not available - falling back to Google search")
-            return None
-            
         try:
             print(f"    === BROWSERBASE AGENT-BASED SEARCH & PRICE EXTRACTION ===")
             print(f"    Competitor URL: {competitor_url}")
@@ -3111,13 +3107,30 @@ def get_competitive_pricing_agent(
         api_key=os.getenv("EXA_API_KEY", "9795f6d4-24b1-4f97-a474-3a84caa17a7f")
     )
     
+    # Try to add BrowserbaseTools if available
+    tools_list = [pricing_tools, reasoning_tools, firecrawl_tools, exa_tools]
+    
+    if BROWSERBASE_AVAILABLE:
+        try:
+            # Ensure environment variables are set
+            if not os.getenv("BROWSERBASE_API_KEY"):
+                os.environ["BROWSERBASE_API_KEY"] = pricing_tools.browserbase_key
+            if not os.getenv("BROWSERBASE_PROJECT_ID"):
+                os.environ["BROWSERBASE_PROJECT_ID"] = pricing_tools.browserbase_project
+            
+            browserbase_tools = BrowserbaseTools()
+            tools_list.append(browserbase_tools)
+            print("BrowserbaseTools added to agent")
+        except Exception as e:
+            print(f"Could not initialize BrowserbaseTools: {e}")
+    
     return Agent(
         name="Competitive Pricing Intelligence Agent",
         agent_id="competitive_pricing",
         user_id=user_id,
         session_id=session_id,
         model=OpenAIChat(id=model_id),
-        tools=[pricing_tools, reasoning_tools, firecrawl_tools, exa_tools],
+        tools=tools_list,
         description=dedent("""\
             You are an expert competitive pricing intelligence agent that tracks and analyzes product prices across e-commerce websites.
             
