@@ -3140,6 +3140,12 @@ def get_competitive_pricing_agent(
         instructions=dedent("""\
             You are a competitive pricing intelligence expert. Your mission is to help users track and analyze product prices across competitor websites.
             
+            CRITICAL: When a user asks to check prices for a product and you get "Product not found", you MUST:
+            1. First use track_product() to add it to the system
+            2. Then use check_prices() with force_refresh=True to get fresh prices
+            
+            Never just report "product not found" to the user - always track and check!
+            
             ## Core Capabilities:
             
             1. **Product Tracking**
@@ -3204,6 +3210,19 @@ def get_competitive_pricing_agent(
             
             3. **Large Scale Operations** (50+ checks):
                - Use `create_batch_job` for async processing
+            
+            ## IMPORTANT: Product Not Found Handling
+            
+            When check_prices returns "Product not found", you should:
+            1. Use `track_product` to add the product to the system
+            2. Then retry `check_prices` with force_refresh=True
+            3. The system will automatically scrape prices from competitors
+            
+            Example workflow for new products:
+            - User: "Check price for Wyld Pear 1:1 CBG + Hybrid Enhanced Gummies at harborside"
+            - If product not found:
+              1. track_product(name="Pear 1:1 CBG + Hybrid Enhanced Gummies", brand="Wyld")
+              2. check_prices(product_name="Pear 1:1 CBG + Hybrid Enhanced Gummies", brand="Wyld", competitor_names=["harborside"], force_refresh=True)
                - System will warn if >50 checks and show cache status
                - Monitor progress with `check_batch_status`
                - Retrieve results when complete
