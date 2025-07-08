@@ -1345,21 +1345,41 @@ class CompetitorPricingTools(Toolkit):
             
             agent = Agent(
                 name="Price Extractor",
-                model=Claude(api_key=os.getenv("ANTHROPIC_API_KEY")),
+                model=Claude(
+                    id="claude-3-5-sonnet-20241022",
+                    api_key=os.getenv("ANTHROPIC_API_KEY")
+                ),
                 tools=[browserbase_tool],
                 instructions=[
-                    "You are a price extraction assistant for cannabis products.",
-                    "Navigate to websites and find specific product prices.",
-                    "Extract all relevant information including:",
-                    "- Product name (exact as shown)",
-                    "- Regular price",
-                    "- Member/discounted price if available", 
-                    "- THC/CBD content",
-                    "- Package size",
+                    "You are a cannabis product price extraction specialist.",
+                    "Your task is to navigate dispensary websites and find specific products.",
+                    "",
+                    "IMPORTANT SEARCH STRATEGIES:",
+                    "1. First try to find and use the site's search functionality",
+                    "2. Look for search boxes, magnifying glass icons, or 'Search' buttons",
+                    "3. If no search box, look for product categories like 'Edibles', 'Gummies', etc.",
+                    "4. Check if there's a menu or products page",
+                    "5. Be patient - pages may take time to load",
+                    "",
+                    "When searching:",
+                    "- Try variations: 'Wyld Strawberry', 'Wyld Strawberry Gummies', just 'Wyld'",
+                    "- Look for brand sections or filters",
+                    "- Check multiple pages of results if paginated",
+                    "",
+                    "Extract ALL of the following if found:",
+                    "- Product name (exactly as shown on page)",
+                    "- Regular price (non-member price)",
+                    "- Member/discounted price if shown",
+                    "- THC content (mg)",
+                    "- CBD content if mentioned",
+                    "- Package size (e.g., '10 pack', '10ct')",
                     "- Availability status",
-                    "Return structured data in your response."
+                    "- Direct product URL",
+                    "",
+                    "Always return data in the specified format, even if product not found."
                 ],
-                show_tool_calls=True
+                show_tool_calls=True,
+                markdown=True
             )
             
             # Build search query
@@ -1369,39 +1389,77 @@ class CompetitorPricingTools(Toolkit):
             prompt = f"""
 Navigate to {competitor_url} and find the price for "{search_query}".
 
-Search for the product by:
-1. Looking for a search box and searching for the product
-2. Or browsing product categories (edibles, gummies)
-3. Or looking for direct product links
+STEP-BY-STEP APPROACH:
+1. First, navigate to the URL using navigate_to()
+2. Wait for the page to load, then use extract_text() to see what's on the page
+3. Look for a search functionality:
+   - Search box (try searching for "{search_query}", "{brand}", or "{product_name}")
+   - Click on search buttons or magnifying glass icons
+   - Fill search fields and submit
+4. If no search, try navigating through menus:
+   - Look for "Shop", "Menu", "Products", "Edibles", or "Gummies" links
+   - Click on relevant categories
+5. Once you find products, look for the specific one matching "{search_query}"
+6. Click on the product if needed to see details
+7. Extract all pricing and product information
 
-Once you find the product, extract:
-- Product name (exactly as shown on the page)
-- Regular price
-- Member price (if available)
-- THC content (e.g., "100mg")
-- CBD content (if mentioned)
-- Package size (e.g., "10 pack")
-- Availability status
-- Product URL
+IMPORTANT:
+- Take your time, pages need to load
+- If you don't find it immediately, try different search terms
+- Look through multiple pages of results
+- Use extract_text() frequently to understand what's on the page
 
-Return the information in this format:
-PRODUCT_NAME: [name]
-REGULAR_PRICE: [price]
-MEMBER_PRICE: [price or N/A]
-THC_CONTENT: [amount]
-CBD_CONTENT: [amount or N/A]
-PACKAGE_SIZE: [size]
-AVAILABILITY: [In Stock/Out of Stock]
-URL: [product url]
-"""
+Once you find the product (or confirm it's not available), return:
+PRODUCT_NAME: [exact name as shown, or "NOT FOUND"]
+REGULAR_PRICE: [price without member discount, or "N/A"]  
+MEMBER_PRICE: [member/discounted price, or "N/A"]
+THC_CONTENT: [amount in mg, or "N/A"]
+CBD_CONTENT: [amount in mg, or "N/A"]
+PACKAGE_SIZE: [size/count, or "N/A"]
+AVAILABILITY: [In Stock/Out of Stock/Not Found]
+URL: [direct product URL, or current page URL]
+
+If you cannot find the product after thorough searching, clearly state:
+PRODUCT_NAME: NOT FOUND
+AVAILABILITY: Not Found
+And explain what you tried."""
             
-            # Run the agent
-            result = await agent.arun(prompt)
+            # Run the agent with streaming to see what it's doing
+            print(f"    Running agent to search for product...")
+            print(f"    Agent prompt: {prompt[:200]}...")
             
-            # Parse the result
-            if result and result.content:
-                content = result.content
-                print(f"    Agent response received, parsing...")
+            # Run with streaming to see the agent's actions
+            try:
+                stream = await agent.arun(prompt, stream=True)
+            except Exception as e:
+                print(f"    Error starting agent stream: {e}")
+                # Try without streaming
+                result = await agent.arun(prompt)
+                full_response = result.content if result else ""
+            else:
+                # Collect the full response while showing progress
+                full_response = ""
+                print(f"    Agent actions:")
+                
+                try:
+                    async for chunk in stream:
+                        if hasattr(chunk, 'content') and chunk.content:
+                            full_response += chunk.content
+                            # Print tool calls and significant content
+                            lines = chunk.content.strip().split('\n')
+                            for line in lines:
+                                if any(keyword in line.lower() for keyword in ['navigate_to', 'extract_text', 'click', 'fill', 'screenshot', 'found', 'searching', 'looking']):
+                                    print(f"      > {line.strip()}")
+                except Exception as e:
+                    print(f"    Error during streaming: {e}")
+                    # Use what we have so far
+                    pass
+            
+            # Parse the final result
+            if full_response:
+                content = full_response
+                print(f"\n    Agent response received, parsing...")
+                print(f"    Response preview: {content[:500]}...")
                 
                 # Extract data using regex
                 import re
@@ -1409,6 +1467,12 @@ URL: [product url]
                 def extract_field(pattern: str, text: str, default=None):
                     match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
                     return match.group(1).strip() if match else default
+                
+                # Check if the agent found the product
+                if "could not find" in content.lower() or "not found" in content.lower() or "no results" in content.lower():
+                    print(f"    Agent indicated product not found")
+                    print(f"    Full agent response:\n{content}")
+                    return None
                 
                 product_name_found = extract_field(r'PRODUCT_NAME:\s*(.+)', content, search_query)
                 regular_price = extract_field(r'REGULAR_PRICE:\s*\$?(\d+\.?\d*)', content)
@@ -1418,6 +1482,14 @@ URL: [product url]
                 package_size = extract_field(r'PACKAGE_SIZE:\s*(.+)', content)
                 availability = extract_field(r'AVAILABILITY:\s*(.+)', content, "in_stock")
                 url = extract_field(r'URL:\s*(.+)', content, competitor_url)
+                
+                # Log what was extracted
+                print(f"    Extracted fields:")
+                print(f"      - Product: {product_name_found}")
+                print(f"      - Regular Price: {regular_price}")
+                print(f"      - Member Price: {member_price}")
+                print(f"      - THC: {thc_content}")
+                print(f"      - URL: {url}")
                 
                 if regular_price:
                     price_data = PriceData(
@@ -1436,6 +1508,7 @@ URL: [product url]
                     return price_data
                 else:
                     print(f"    Could not extract price from agent response")
+                    print(f"    Full response for debugging:\n{content}")
                     return None
             else:
                 print(f"    No response from agent")
