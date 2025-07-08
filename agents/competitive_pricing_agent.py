@@ -22,6 +22,7 @@ from agno.tools.toolkit import Toolkit
 from agno.tools.firecrawl import FirecrawlTools
 from agno.tools.exa import ExaTools
 from agno.tools.reasoning import ReasoningTools
+from agno.tools.browserbase import BrowserbaseTools
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -1305,6 +1306,122 @@ class CompetitorPricingTools(Toolkit):
             print(f"Error searching URLs: {e}")
             return []
     
+    async def _browserbase_search_and_extract_price_simple(self, competitor_url: str, brand: str, 
+                                                          product_name: str) -> Optional[PriceData]:
+        """Use BrowserbaseTools with an agent to search and extract price"""
+        try:
+            print(f"    === BROWSERBASE AGENT-BASED SEARCH & PRICE EXTRACTION ===")
+            print(f"    Competitor URL: {competitor_url}")
+            print(f"    Product: {brand} {product_name}")
+            
+            # Create a temporary agent with BrowserbaseTools
+            from agno.agent import Agent
+            from agno.models.anthropic import Claude
+            
+            agent = Agent(
+                name="Price Extractor",
+                model=Claude(api_key=os.getenv("ANTHROPIC_API_KEY")),
+                tools=[BrowserbaseTools()],
+                instructions=[
+                    "You are a price extraction assistant for cannabis products.",
+                    "Navigate to websites and find specific product prices.",
+                    "Extract all relevant information including:",
+                    "- Product name (exact as shown)",
+                    "- Regular price",
+                    "- Member/discounted price if available", 
+                    "- THC/CBD content",
+                    "- Package size",
+                    "- Availability status",
+                    "Return structured data in your response."
+                ],
+                show_tool_calls=True
+            )
+            
+            # Build search query
+            search_query = f"{brand} {product_name}".strip() if brand else product_name
+            
+            # Create prompt for the agent
+            prompt = f"""
+Navigate to {competitor_url} and find the price for "{search_query}".
+
+Search for the product by:
+1. Looking for a search box and searching for the product
+2. Or browsing product categories (edibles, gummies)
+3. Or looking for direct product links
+
+Once you find the product, extract:
+- Product name (exactly as shown on the page)
+- Regular price
+- Member price (if available)
+- THC content (e.g., "100mg")
+- CBD content (if mentioned)
+- Package size (e.g., "10 pack")
+- Availability status
+- Product URL
+
+Return the information in this format:
+PRODUCT_NAME: [name]
+REGULAR_PRICE: [price]
+MEMBER_PRICE: [price or N/A]
+THC_CONTENT: [amount]
+CBD_CONTENT: [amount or N/A]
+PACKAGE_SIZE: [size]
+AVAILABILITY: [In Stock/Out of Stock]
+URL: [product url]
+"""
+            
+            # Run the agent
+            result = await agent.arun(prompt)
+            
+            # Parse the result
+            if result and result.content:
+                content = result.content
+                print(f"    Agent response received, parsing...")
+                
+                # Extract data using regex
+                import re
+                
+                def extract_field(pattern: str, text: str, default=None):
+                    match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+                    return match.group(1).strip() if match else default
+                
+                product_name_found = extract_field(r'PRODUCT_NAME:\s*(.+)', content, search_query)
+                regular_price = extract_field(r'REGULAR_PRICE:\s*\$?(\d+\.?\d*)', content)
+                member_price = extract_field(r'MEMBER_PRICE:\s*\$?(\d+\.?\d*)', content)
+                thc_content = extract_field(r'THC_CONTENT:\s*(.+)', content)
+                cbd_content = extract_field(r'CBD_CONTENT:\s*(.+)', content)
+                package_size = extract_field(r'PACKAGE_SIZE:\s*(.+)', content)
+                availability = extract_field(r'AVAILABILITY:\s*(.+)', content, "in_stock")
+                url = extract_field(r'URL:\s*(.+)', content, competitor_url)
+                
+                if regular_price:
+                    price_data = PriceData(
+                        product_name=product_name_found,
+                        price=float(regular_price),
+                        member_price=float(member_price) if member_price and member_price.lower() != 'n/a' else None,
+                        availability_status=availability.lower().replace(' ', '_'),
+                        url=url,
+                        thc_content=thc_content if thc_content and thc_content.lower() != 'n/a' else None,
+                        cbd_content=cbd_content if cbd_content and cbd_content.lower() != 'n/a' else None,
+                        package_size=package_size if package_size and package_size.lower() != 'n/a' else None,
+                        raw_data={"agent_response": content}
+                    )
+                    
+                    print(f"    Successfully extracted price: ${price_data.price}")
+                    return price_data
+                else:
+                    print(f"    Could not extract price from agent response")
+                    return None
+            else:
+                print(f"    No response from agent")
+                return None
+                
+        except Exception as e:
+            print(f"    Browserbase agent error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
     async def _browserbase_search_and_extract_price(self, competitor_url: str, brand: str, 
                                                    product_name: str) -> Optional[PriceData]:
         """
@@ -1377,7 +1494,7 @@ class CompetitorPricingTools(Toolkit):
                 nav_script = f'window.location.href = "{competitor_url}"; return true;'
                 
                 await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": nav_script},
                     timeout=10.0
@@ -1413,7 +1530,7 @@ class CompetitorPricingTools(Toolkit):
                 """
                 
                 await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://www.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": nav_to_product_script},
                     timeout=10.0
@@ -1475,7 +1592,7 @@ class CompetitorPricingTools(Toolkit):
         """
         
         page_info_response = await client.post(
-            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
             headers=headers,
             json={"script": get_page_info_script},
             timeout=10.0
@@ -1516,8 +1633,9 @@ Return ONLY executable JavaScript code, no explanation. The code should:
             llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
         else:
             # For Claude/Anthropic models
-            messages = [{"role": "user", "content": navigation_prompt}]
-            llm_response = await navigator_llm.arun(messages=messages)
+            from agno.utils.message import Message
+            messages = [Message(role="user", content=navigation_prompt)]
+            llm_response = await navigator_llm.aresponse(messages=messages)
         navigation_script = llm_response.content.strip()
         
         # Remove code blocks if present
@@ -1528,10 +1646,11 @@ Return ONLY executable JavaScript code, no explanation. The code should:
             navigation_script = navigation_script.strip()
         
         print(f"    Executing LLM-provided navigation script...")
+        print(f"    Script to execute: {navigation_script[:200]}...")
         
         # Execute the LLM-provided script
         nav_response = await client.post(
-            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
             headers=headers,
             json={"script": navigation_script},
             timeout=10.0
@@ -1592,7 +1711,7 @@ Return ONLY executable JavaScript code, no explanation. The code should:
         """
         
         page_extract_response = await client.post(
-            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
             headers=headers,
             json={"script": extract_page_script},
             timeout=10.0
@@ -1629,8 +1748,9 @@ Return ONLY the JSON array, no explanation."""
             llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
         else:
             # For Claude/Anthropic models
-            messages = [{"role": "user", "content": extraction_prompt}]
-            llm_extract_response = await navigator_llm.arun(messages=messages)
+            from agno.utils.message import Message
+            messages = [Message(role="user", content=extraction_prompt)]
+            llm_extract_response = await navigator_llm.aresponse(messages=messages)
         urls_json = llm_extract_response.content.strip()
         
         # Parse the URLs
@@ -1692,7 +1812,7 @@ Return ONLY the JSON array, no explanation."""
         """
         
         product_response = await client.post(
-            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
             headers=headers,
             json={"script": extract_product_script},
             timeout=10.0
@@ -1739,8 +1859,9 @@ Return ONLY the JSON object, no explanation."""
             llm_price_response = navigator_llm.run([{"role": "user", "content": price_prompt}])
         else:
             # For Claude/Anthropic models
-            messages = [{"role": "user", "content": price_prompt}]
-            llm_price_response = await navigator_llm.arun(messages=messages)
+            from agno.utils.message import Message
+            messages = [Message(role="user", content=price_prompt)]
+            llm_price_response = await navigator_llm.aresponse(messages=messages)
         price_json = llm_price_response.content.strip()
         
         try:
@@ -1861,7 +1982,7 @@ Return ONLY the JSON object, no explanation."""
                 nav_script = f'window.location.href = "{competitor_url}"; return true;'
                 
                 await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": nav_script},
                     timeout=10.0
@@ -1896,7 +2017,7 @@ Return ONLY the JSON object, no explanation."""
                 """
                 
                 page_info_response = await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://www.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": get_page_info_script},
                     timeout=10.0
@@ -1933,12 +2054,13 @@ Return ONLY executable JavaScript code, no explanation. The code should:
                 
                 print(f"    Asking LLM for navigation guidance...")
                 # Use the correct method based on the LLM type
-        if hasattr(navigator_llm, 'run'):
-            llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
-        else:
-            # For Claude/Anthropic models
-            messages = [{"role": "user", "content": navigation_prompt}]
-            llm_response = await navigator_llm.arun(messages=messages)
+                if hasattr(navigator_llm, 'run'):
+                    llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
+                else:
+                    # For Claude/Anthropic models
+                    from agno.utils.message import Message
+                    messages = [Message(role="user", content=navigation_prompt)]
+                    llm_response = await navigator_llm.aresponse(messages=messages)
                 navigation_script = llm_response.content.strip()
                 
                 # Remove code blocks if present
@@ -1952,7 +2074,7 @@ Return ONLY executable JavaScript code, no explanation. The code should:
                 
                 # Execute the LLM-provided script
                 nav_response = await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://www.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": navigation_script},
                     timeout=10.0
@@ -2004,7 +2126,7 @@ Return ONLY executable JavaScript code, no explanation. The code should:
                 """
                 
                 page_extract_response = await client.post(
-                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    f"https://www.browserbase.com/v1/sessions/{session_id}/debug/evaluate",
                     headers=headers,
                     json={"script": extract_page_script},
                     timeout=10.0
@@ -2037,12 +2159,13 @@ If no relevant URLs found, return an empty array: []
 Return ONLY the JSON array, no explanation."""
                 
                 # Use the correct method based on the LLM type
-        if hasattr(navigator_llm, 'run'):
-            llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
-        else:
-            # For Claude/Anthropic models
-            messages = [{"role": "user", "content": extraction_prompt}]
-            llm_extract_response = await navigator_llm.arun(messages=messages)
+                if hasattr(navigator_llm, 'run'):
+                    llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
+                else:
+                    # For Claude/Anthropic models
+                    from agno.utils.message import Message
+                    messages = [Message(role="user", content=extraction_prompt)]
+                    llm_extract_response = await navigator_llm.aresponse(messages=messages)
                 urls_json = llm_extract_response.content.strip()
                 
                 # Parse the URLs
@@ -2175,8 +2298,8 @@ Return ONLY the JSON array, no explanation."""
             for query in search_queries:
                 print(f"    Trying query: '{query}'")
                 
-                # Use the new combined search and extract function
-                price_data = await self._browserbase_search_and_extract_price(
+                # Use the simplified BrowserbaseTools approach
+                price_data = await self._browserbase_search_and_extract_price_simple(
                     competitor_url, "", query
                 )
                 
