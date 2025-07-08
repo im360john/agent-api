@@ -3099,18 +3099,26 @@ def get_competitive_pricing_agent(
     )
     
     # Add Firecrawl for direct scraping when needed
+    firecrawl_api_key = os.getenv("FIRECRAWL_API_KEY")
+    if not firecrawl_api_key:
+        raise ValueError("FIRECRAWL_API_KEY environment variable not set")
+    
     firecrawl_tools = FirecrawlTools(
         scrape=True,
         crawl=False,  # Don't need full site crawling
-        api_key=os.getenv("FIRECRAWL_API_KEY", "fc-05935e879f594170b09e54181f4dd5f0")
+        api_key=firecrawl_api_key
     )
     
     # Add Exa for finding products across the web
+    exa_api_key = os.getenv("EXA_API_KEY")
+    if not exa_api_key:
+        raise ValueError("EXA_API_KEY environment variable not set")
+    
     exa_tools = ExaTools(
         search=True,
         find_similar=True,
         get_contents=True,
-        api_key=os.getenv("EXA_API_KEY", "9795f6d4-24b1-4f97-a474-3a84caa17a7f")
+        api_key=exa_api_key
     )
     
     # Try to add BrowserbaseTools if available
