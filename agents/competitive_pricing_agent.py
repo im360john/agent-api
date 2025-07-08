@@ -1305,6 +1305,490 @@ class CompetitorPricingTools(Toolkit):
             print(f"Error searching URLs: {e}")
             return []
     
+    async def _browserbase_search_and_extract_price(self, competitor_url: str, brand: str, 
+                                                   product_name: str) -> Optional[PriceData]:
+        """
+        Use Browserbase with LLM guidance to search for products AND extract price data.
+        
+        Args:
+            competitor_url: Base URL of competitor site
+            brand: Brand name
+            product_name: Product to search for
+            
+        Returns:
+            PriceData object with price information, or None if not found
+        """
+        print(f"    === BROWSERBASE LLM-GUIDED SEARCH & PRICE EXTRACTION ===")
+        print(f"    Competitor URL: {competitor_url}")
+        print(f"    Search query: {product_name}")
+        print(f"    Brand: {brand if brand else '(empty)'}")
+        
+        # Initialize Claude for navigation guidance
+        try:
+            from agno.models.anthropic import Claude
+            navigator_llm = Claude(id="claude-3-5-sonnet-20241022")
+        except Exception as e:
+            print(f"    ERROR: Could not initialize Claude for navigation: {e}")
+            print(f"    Falling back to OpenAI")
+            from agno.models.openai import OpenAIChat
+            navigator_llm = OpenAIChat(id="gpt-4o")
+        
+        try:
+            import httpx
+            from urllib.parse import urljoin
+            
+            # Start a Browserbase session
+            headers = {
+                "X-BB-API-Key": self.browserbase_key,
+                "Content-Type": "application/json"
+            }
+            
+            # Create session
+            async with httpx.AsyncClient() as client:
+                # Start session
+                print(f"    Creating Browserbase session for URL: {competitor_url}")
+                session_response = await client.post(
+                    "https://api.browserbase.com/v1/sessions",
+                    headers=headers,
+                    json={
+                        "projectId": self.browserbase_project
+                    },
+                    timeout=30.0
+                )
+                
+                if session_response.status_code != 201:
+                    print(f"    ERROR: Failed to create Browserbase session")
+                    print(f"    Status code: {session_response.status_code}")
+                    print(f"    Response: {session_response.text}")
+                    return None
+                
+                session_data = session_response.json()
+                session_id = session_data.get("id")
+                
+                if not session_id:
+                    print("    ERROR: No session ID returned from Browserbase")
+                    print(f"    Session data: {session_data}")
+                    return None
+                
+                print(f"    Session created successfully: {session_id}")
+                
+                # Navigate to the competitor URL
+                print(f"    Navigating to {competitor_url}")
+                nav_script = f'window.location.href = "{competitor_url}"; return true;'
+                
+                await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": nav_script},
+                    timeout=10.0
+                )
+                
+                # Wait for page to load
+                print(f"    Waiting 3 seconds for page to load...")
+                await asyncio.sleep(3)
+                
+                # Step 1: Navigate and search
+                urls = await self._browserbase_navigate_and_search(
+                    client, session_id, headers, navigator_llm, 
+                    competitor_url, brand, product_name
+                )
+                
+                if not urls:
+                    print(f"    No product URLs found")
+                    # Clean up session
+                    await client.delete(
+                        f"https://api.browserbase.com/v1/sessions/{session_id}",
+                        headers=headers
+                    )
+                    return None
+                
+                # Step 2: Navigate to product and extract price
+                target_url = urls[0]
+                print(f"\n    Navigating to product page: {target_url}")
+                
+                # Navigate to the product page
+                nav_to_product_script = f"""
+                window.location.href = '{target_url}';
+                return true;
+                """
+                
+                await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": nav_to_product_script},
+                    timeout=10.0
+                )
+                
+                # Wait for product page to load
+                print(f"    Waiting 3 seconds for product page to load...")
+                await asyncio.sleep(3)
+                
+                # Extract price data with LLM
+                price_data = await self._browserbase_extract_price(
+                    client, session_id, headers, navigator_llm,
+                    target_url, brand, product_name
+                )
+                
+                # Clean up session
+                print(f"    Cleaning up Browserbase session {session_id}")
+                await client.delete(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}",
+                    headers=headers
+                )
+                
+                print(f"    === BROWSERBASE SEARCH & EXTRACTION END ===")
+                return price_data
+                
+        except Exception as e:
+            print(f"    Browserbase error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    async def _browserbase_navigate_and_search(self, client, session_id: str, headers: dict,
+                                              navigator_llm, competitor_url: str, 
+                                              brand: str, product_name: str) -> List[str]:
+        """Navigate website and search for product, return URLs"""
+        # [This is the existing navigation code - moved to separate function]
+        # Get page content for LLM analysis
+        get_page_info_script = """
+        return {
+            url: window.location.href,
+            title: document.title,
+            hasSearchBox: !!document.querySelector('input[type="search"], input[name="q"], input[placeholder*="search" i]'),
+            forms: Array.from(document.querySelectorAll('form')).map(f => ({
+                action: f.action,
+                method: f.method,
+                inputs: Array.from(f.querySelectorAll('input')).map(i => ({
+                    type: i.type,
+                    name: i.name,
+                    placeholder: i.placeholder,
+                    id: i.id,
+                    className: i.className
+                }))
+            })).slice(0, 3),
+            links: Array.from(document.querySelectorAll('a[href*="product"], a[href*="' + '${brand}'.toLowerCase() + '"]')).slice(0, 10).map(a => ({
+                href: a.href,
+                text: a.textContent.trim()
+            }))
+        };
+        """
+        
+        page_info_response = await client.post(
+            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            headers=headers,
+            json={"script": get_page_info_script},
+            timeout=10.0
+        )
+        
+        page_info = {}
+        if page_info_response.status_code == 200:
+            page_info = page_info_response.json().get("value", {})
+            print(f"    Page analysis: Found search box: {page_info.get('hasSearchBox', False)}")
+        
+        # Prepare search term
+        search_term = f"{brand} {product_name}".strip() if brand else product_name.strip()
+        
+        # Ask LLM for navigation guidance
+        navigation_prompt = f"""You are helping navigate a cannabis dispensary website to find a specific product.
+
+Current page: {competitor_url}
+Page title: {page_info.get('title', 'Unknown')}
+Looking for: {search_term}
+
+Page has search box: {page_info.get('hasSearchBox', False)}
+Available forms: {json.dumps(page_info.get('forms', []), indent=2)}
+
+Your task is to provide JavaScript code to either:
+1. Find and use the search functionality to search for "{search_term}"
+2. Or if no search is available, identify product category links to click
+
+Return ONLY executable JavaScript code, no explanation. The code should:
+- For search: Find the search input, fill it with the search term, and submit
+- For navigation: Return an array of URLs to visit that might contain the product
+- Use vanilla JavaScript only
+- Return false if neither search nor relevant links are found
+"""
+        
+        print(f"    Asking LLM for navigation guidance...")
+        # Use the correct method based on the LLM type
+        if hasattr(navigator_llm, 'run'):
+            llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
+        else:
+            # For Claude/Anthropic models
+            messages = [{"role": "user", "content": navigation_prompt}]
+            llm_response = await navigator_llm.arun(messages=messages)
+        navigation_script = llm_response.content.strip()
+        
+        # Remove code blocks if present
+        if navigation_script.startswith("```"):
+            navigation_script = navigation_script.split("```")[1]
+            if navigation_script.startswith("javascript"):
+                navigation_script = navigation_script[10:]
+            navigation_script = navigation_script.strip()
+        
+        print(f"    Executing LLM-provided navigation script...")
+        
+        # Execute the LLM-provided script
+        nav_response = await client.post(
+            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            headers=headers,
+            json={"script": navigation_script},
+            timeout=10.0
+        )
+        
+        search_found = False
+        if nav_response.status_code == 200:
+            nav_result = nav_response.json().get("value")
+            if nav_result and nav_result != False:
+                print(f"    LLM navigation successful")
+                search_found = True
+                # Wait for results to load
+                await asyncio.sleep(5)
+            else:
+                print(f"    LLM navigation returned no results")
+        else:
+            print(f"    ERROR executing LLM navigation script: {nav_response.status_code}")
+            print(f"    Response: {nav_response.text}")
+        
+        # Now extract product URLs
+        return await self._browserbase_extract_urls(
+            client, session_id, headers, navigator_llm,
+            brand, product_name, search_term
+        )
+    
+    async def _browserbase_extract_urls(self, client, session_id: str, headers: dict,
+                                       navigator_llm, brand: str, product_name: str,
+                                       search_term: str) -> List[str]:
+        """Extract product URLs from current page"""
+        print(f"    Extracting product URLs with LLM assistance...")
+        
+        # Get current page state
+        extract_page_script = """
+        return {
+            url: window.location.href,
+            title: document.title,
+            products: Array.from(document.querySelectorAll('a')).filter(a => {
+                const href = a.href;
+                const text = (a.textContent || '').trim();
+                // Basic filtering for potential product links
+                return text.length > 0 && 
+                       !href.includes('/search') && 
+                       !href.includes('?q=') &&
+                       !href.includes('/login') &&
+                       !href.includes('/cart') &&
+                       !href.includes('/checkout') &&
+                       (href.includes('/product') || 
+                        href.includes('/menu') || 
+                        href.includes('/shop') ||
+                        text.toLowerCase().includes('gummies') ||
+                        text.toLowerCase().includes('edible'));
+            }).slice(0, 50).map(a => ({
+                href: a.href,
+                text: a.textContent.trim(),
+                parent: a.parentElement ? a.parentElement.textContent.trim() : ''
+            }))
+        };
+        """
+        
+        page_extract_response = await client.post(
+            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            headers=headers,
+            json={"script": extract_page_script},
+            timeout=10.0
+        )
+        
+        page_data = {}
+        if page_extract_response.status_code == 200:
+            page_data = page_extract_response.json().get("value", {})
+            print(f"    Found {len(page_data.get('products', []))} potential product links")
+        
+        # Ask LLM to identify relevant product URLs
+        extraction_prompt = f"""You are analyzing a cannabis dispensary website to find specific product URLs.
+
+Looking for: {search_term}
+Current page URL: {page_data.get('url', 'Unknown')}
+
+Potential product links found on page:
+{json.dumps(page_data.get('products', [])[:20], indent=2)}
+
+Your task is to identify which URLs are most likely to be the product we're looking for.
+Look for:
+- URLs or text containing "{brand}" (if provided)
+- URLs or text containing keywords from "{product_name}"
+- Cannabis product pages (not category pages)
+
+Return a JSON array of the most relevant URLs (up to 5), ordered by relevance.
+Format: ["url1", "url2", ...]
+If no relevant URLs found, return an empty array: []
+
+Return ONLY the JSON array, no explanation."""
+        
+        # Use the correct method based on the LLM type
+        if hasattr(navigator_llm, 'run'):
+            llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
+        else:
+            # For Claude/Anthropic models
+            messages = [{"role": "user", "content": extraction_prompt}]
+            llm_extract_response = await navigator_llm.arun(messages=messages)
+        urls_json = llm_extract_response.content.strip()
+        
+        # Parse the URLs
+        urls = []
+        try:
+            # Clean up the response
+            if urls_json.startswith("```"):
+                urls_json = urls_json.split("```")[1]
+                if urls_json.startswith("json"):
+                    urls_json = urls_json[4:]
+                urls_json = urls_json.strip()
+            
+            urls = json.loads(urls_json)
+            print(f"    LLM identified {len(urls)} relevant product URLs")
+            for url in urls[:3]:  # Log first 3
+                print(f"      - {url}")
+        except Exception as e:
+            print(f"    ERROR parsing LLM response: {e}")
+            print(f"    Raw response: {urls_json[:200]}...")
+        
+        return urls
+    
+    async def _browserbase_extract_price(self, client, session_id: str, headers: dict,
+                                        navigator_llm, product_url: str,
+                                        brand: str, product_name: str) -> Optional[PriceData]:
+        """Extract price data from product page using LLM"""
+        print(f"    Extracting price data with LLM...")
+        
+        # Get product page content
+        extract_product_script = """
+        return {
+            url: window.location.href,
+            title: document.title,
+            bodyText: document.body.innerText.slice(0, 5000),
+            // Try to find price elements
+            priceElements: Array.from(document.querySelectorAll('*')).filter(el => {
+                const text = el.textContent || '';
+                return text.includes('$') && /\\$\\d+/.test(text) && 
+                       !el.querySelector('*'); // Leaf nodes only
+            }).slice(0, 20).map(el => ({
+                text: el.textContent.trim(),
+                className: el.className,
+                id: el.id,
+                tag: el.tagName
+            })),
+            // Look for product details
+            productInfo: {
+                h1: document.querySelector('h1')?.textContent?.trim(),
+                h2: Array.from(document.querySelectorAll('h2')).map(h => h.textContent.trim()).slice(0, 5),
+                // Common product info patterns
+                thc: Array.from(document.querySelectorAll('*')).find(el => 
+                    /\\b\\d+mg\\s*THC/i.test(el.textContent))?.textContent?.trim(),
+                cbd: Array.from(document.querySelectorAll('*')).find(el => 
+                    /\\b\\d+mg\\s*CBD/i.test(el.textContent))?.textContent?.trim(),
+                stock: Array.from(document.querySelectorAll('*')).find(el => 
+                    /(in stock|out of stock|available)/i.test(el.textContent))?.textContent?.trim()
+            }
+        };
+        """
+        
+        product_response = await client.post(
+            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+            headers=headers,
+            json={"script": extract_product_script},
+            timeout=10.0
+        )
+        
+        product_data = {}
+        if product_response.status_code == 200:
+            product_data = product_response.json().get("value", {})
+            print(f"    Found {len(product_data.get('priceElements', []))} price elements")
+        
+        # Ask LLM to extract structured price data
+        price_prompt = f"""You are extracting price and product information from a cannabis dispensary product page.
+
+Product URL: {product_url}
+Looking for: {brand} {product_name}
+
+Page content summary:
+- Title: {product_data.get('title', '')}
+- H1: {product_data.get('productInfo', {}).get('h1', '')}
+- Price elements found: {json.dumps(product_data.get('priceElements', [])[:10], indent=2)}
+- THC info: {product_data.get('productInfo', {}).get('thc', 'Not found')}
+- Stock info: {product_data.get('productInfo', {}).get('stock', 'Not found')}
+
+Body text excerpt:
+{product_data.get('bodyText', '')[:1000]}
+
+Extract and return the following information as JSON:
+{{
+    "product_name": "Full product name as shown on page",
+    "regular_price": 29.99,  // Regular price as a number
+    "member_price": 24.99,   // Member/discounted price if available, null if not
+    "thc_content": "100mg",  // THC content
+    "cbd_content": "0mg",    // CBD content if mentioned
+    "package_size": "10 pack", // Package size/count
+    "in_stock": true,        // Whether product is in stock
+    "stock_status": "In Stock" // Exact stock status text
+}}
+
+If you cannot find certain information, use null for that field.
+Return ONLY the JSON object, no explanation."""
+        
+        # Use the correct method based on the LLM type
+        if hasattr(navigator_llm, 'run'):
+            llm_price_response = navigator_llm.run([{"role": "user", "content": price_prompt}])
+        else:
+            # For Claude/Anthropic models
+            messages = [{"role": "user", "content": price_prompt}]
+            llm_price_response = await navigator_llm.arun(messages=messages)
+        price_json = llm_price_response.content.strip()
+        
+        try:
+            # Clean up the response
+            if price_json.startswith("```"):
+                price_json = price_json.split("```")[1]
+                if price_json.startswith("json"):
+                    price_json = price_json[4:]
+                price_json = price_json.strip()
+            
+            extracted = json.loads(price_json)
+            print(f"    Successfully extracted price data:")
+            print(f"      Product: {extracted.get('product_name')}")
+            print(f"      Price: ${extracted.get('regular_price')}")
+            if extracted.get('member_price'):
+                print(f"      Member Price: ${extracted.get('member_price')}")
+            print(f"      THC: {extracted.get('thc_content')}")
+            print(f"      Stock: {extracted.get('stock_status')}")
+            
+            # Determine availability status
+            in_stock = extracted.get("in_stock", True)
+            stock_status = extracted.get("stock_status", "")
+            
+            if not in_stock or "out" in stock_status.lower():
+                availability = "out_of_stock"
+            else:
+                availability = "in_stock"
+            
+            # Create PriceData object
+            return PriceData(
+                product_name=extracted.get("product_name", product_name),
+                price=extracted.get("regular_price", 0),
+                member_price=extracted.get("member_price"),
+                availability_status=availability,
+                url=product_url,
+                price_tiers=[],  # Could extract tiers if needed
+                thc_content=extracted.get("thc_content"),
+                cbd_content=extracted.get("cbd_content"),
+                package_size=extracted.get("package_size"),
+                raw_data=extracted,
+                scraped_at=datetime.now(timezone.utc)
+            )
+            
+        except Exception as e:
+            print(f"    ERROR parsing price data: {e}")
+            print(f"    Raw response: {price_json[:500]}...")
+            return None
+    
     async def _browserbase_search_fallback(self, competitor_url: str, brand: str, 
                                           product_name: str) -> List[str]:
         """
@@ -1351,8 +1835,7 @@ class CompetitorPricingTools(Toolkit):
                     "https://api.browserbase.com/v1/sessions",
                     headers=headers,
                     json={
-                        "projectId": self.browserbase_project,
-                        "url": competitor_url
+                        "projectId": self.browserbase_project
                     },
                     timeout=30.0
                 )
@@ -1360,7 +1843,7 @@ class CompetitorPricingTools(Toolkit):
                 if session_response.status_code != 201:
                     print(f"    ERROR: Failed to create Browserbase session")
                     print(f"    Status code: {session_response.status_code}")
-                    print(f"    Response: {await session_response.text()}")
+                    print(f"    Response: {session_response.text}")
                     return []
                 
                 session_data = session_response.json()
@@ -1372,6 +1855,17 @@ class CompetitorPricingTools(Toolkit):
                     return []
                 
                 print(f"    Session created successfully: {session_id}")
+                
+                # Navigate to the competitor URL
+                print(f"    Navigating to {competitor_url}")
+                nav_script = f'window.location.href = "{competitor_url}"; return true;'
+                
+                await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": nav_script},
+                    timeout=10.0
+                )
                 
                 # Wait for page to load
                 print(f"    Waiting 3 seconds for page to load...")
@@ -1438,7 +1932,13 @@ Return ONLY executable JavaScript code, no explanation. The code should:
 """
                 
                 print(f"    Asking LLM for navigation guidance...")
-                llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
+                # Use the correct method based on the LLM type
+        if hasattr(navigator_llm, 'run'):
+            llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
+        else:
+            # For Claude/Anthropic models
+            messages = [{"role": "user", "content": navigation_prompt}]
+            llm_response = await navigator_llm.arun(messages=messages)
                 navigation_script = llm_response.content.strip()
                 
                 # Remove code blocks if present
@@ -1470,7 +1970,7 @@ Return ONLY executable JavaScript code, no explanation. The code should:
                         print(f"    LLM navigation returned no results")
                 else:
                     print(f"    ERROR executing LLM navigation script: {nav_response.status_code}")
-                    print(f"    Response: {await nav_response.text()}")
+                    print(f"    Response: {nav_response.text}")
                 
                 # Now extract product information with LLM guidance
                 print(f"    Extracting product URLs with LLM assistance...")
@@ -1536,7 +2036,13 @@ If no relevant URLs found, return an empty array: []
 
 Return ONLY the JSON array, no explanation."""
                 
-                llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
+                # Use the correct method based on the LLM type
+        if hasattr(navigator_llm, 'run'):
+            llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
+        else:
+            # For Claude/Anthropic models
+            messages = [{"role": "user", "content": extraction_prompt}]
+            llm_extract_response = await navigator_llm.arun(messages=messages)
                 urls_json = llm_extract_response.content.strip()
                 
                 # Parse the URLs
@@ -1662,28 +2168,32 @@ Return ONLY the JSON array, no explanation."""
                     base_query = ' '.join(base_words)
                     search_queries.append(base_query)
             
-            # Try searching with each query variant - Browserbase first, then Google
+            # Try Browserbase with LLM for search AND price extraction
+            print(f"    Using Browserbase LLM-guided search and price extraction...")
+            
+            # Try each query variant until we get price data
+            for query in search_queries:
+                print(f"    Trying query: '{query}'")
+                
+                # Use the new combined search and extract function
+                price_data = await self._browserbase_search_and_extract_price(
+                    competitor_url, "", query
+                )
+                
+                if price_data:
+                    print(f"    Successfully extracted price data with Browserbase")
+                    return price_data
+            
+            # If Browserbase fails, try Google search + Firecrawl as fallback
+            print(f"    Browserbase could not find product, trying Google search + Firecrawl fallback...")
+            
             all_urls = []
             for query in search_queries:
-                # Don't extract brand since query already contains it
-                # This avoids duplicating the brand in search
-                print(f"    Searching for query='{query}' at {competitor_url}")
-                
-                # Try Browserbase first
-                print(f"    Attempting Browserbase search...")
-                query_urls = await self._browserbase_search_fallback(competitor_url, "", query)
-                
-                if query_urls:
-                    print(f"    Browserbase found {len(query_urls)} URLs")
-                else:
-                    print(f"    Browserbase returned 0 results, trying Google search fallback...")
-                    query_urls = await self.search_product_urls(query, "", competitor_url)
-                    print(f"    Google search found {len(query_urls)} URLs")
-                
+                query_urls = await self.search_product_urls(query, "", competitor_url)
                 if query_urls:
                     all_urls.extend(query_urls)
             
-            # Remove duplicates while preserving order
+            # Remove duplicates
             seen = set()
             urls = []
             for url in all_urls:
@@ -1693,14 +2203,11 @@ Return ONLY the JSON array, no explanation."""
             
             if not urls:
                 print(f"    No product URLs found for {search_query} (or variants) at {competitor_name}")
-                # Return None to indicate product not found, which will result in "not_carried" status
                 return None
             
-            print(f"    Final URLs to scrape: {urls}")
-            
-            # Try Firecrawl first on the top URL
+            print(f"    Found {len(urls)} URLs via Google, trying Firecrawl on first URL...")
             target_url = urls[0]
-            print(f"Scraping {target_url} with Firecrawl...")
+            print(f"    Scraping {target_url} with Firecrawl...")
             
             # Cannabis product extraction schema
             extraction_schema = {
