@@ -22,7 +22,14 @@ from agno.tools.toolkit import Toolkit
 from agno.tools.firecrawl import FirecrawlTools
 from agno.tools.exa import ExaTools
 from agno.tools.reasoning import ReasoningTools
-from agno.tools.browserbase import BrowserbaseTools
+
+# Try to import BrowserbaseTools, but make it optional
+try:
+    from agno.tools.browserbase import BrowserbaseTools
+    BROWSERBASE_AVAILABLE = True
+except ImportError:
+    BROWSERBASE_AVAILABLE = False
+    BrowserbaseTools = None
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -1309,6 +1316,10 @@ class CompetitorPricingTools(Toolkit):
     async def _browserbase_search_and_extract_price_simple(self, competitor_url: str, brand: str, 
                                                           product_name: str) -> Optional[PriceData]:
         """Use BrowserbaseTools with an agent to search and extract price"""
+        if not BROWSERBASE_AVAILABLE:
+            print(f"    BrowserbaseTools not available - falling back to Google search")
+            return None
+            
         try:
             print(f"    === BROWSERBASE AGENT-BASED SEARCH & PRICE EXTRACTION ===")
             print(f"    Competitor URL: {competitor_url}")
