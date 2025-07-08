@@ -1308,7 +1308,7 @@ class CompetitorPricingTools(Toolkit):
     async def _browserbase_search_fallback(self, competitor_url: str, brand: str, 
                                           product_name: str) -> List[str]:
         """
-        Use Browserbase to navigate to site and search for product.
+        Use Browserbase with LLM guidance to navigate and search for products.
         
         Args:
             competitor_url: Base URL of competitor site
@@ -1318,10 +1318,20 @@ class CompetitorPricingTools(Toolkit):
         Returns:
             List of potential product URLs found
         """
-        print(f"    === BROWSERBASE SEARCH START ===")
+        print(f"    === BROWSERBASE LLM-GUIDED SEARCH START ===")
         print(f"    Competitor URL: {competitor_url}")
         print(f"    Search query: {product_name}")
         print(f"    Brand: {brand if brand else '(empty)'}")
+        
+        # Initialize Claude for navigation guidance
+        try:
+            from agno.models.anthropic import Claude
+            navigator_llm = Claude(id="claude-3-5-sonnet-20241022")
+        except Exception as e:
+            print(f"    ERROR: Could not initialize Claude for navigation: {e}")
+            print(f"    Falling back to OpenAI")
+            from agno.models.openai import OpenAIChat
+            navigator_llm = OpenAIChat(id="gpt-4o")
         
         try:
             import httpx
@@ -1367,154 +1377,185 @@ class CompetitorPricingTools(Toolkit):
                 print(f"    Waiting 3 seconds for page to load...")
                 await asyncio.sleep(3)
                 
-                # Try to find and use search functionality
-                # Common search selectors
-                search_selectors = [
-                    'input[type="search"]',
-                    'input[placeholder*="search" i]',
-                    'input[placeholder*="product" i]',
-                    'input[name*="search" i]',
-                    'input[name="q"]',
-                    'input.search',
-                    '#search',
-                    '.search-input'
-                ]
-                
-                # Execute search
-                search_term = f"{brand} {product_name}".strip() if brand else product_name.strip()
-                simplified_search = ' '.join(search_term.split()[:3])  # Use first 3 words
-                
-                print(f"    Searching for: '{search_term}'")
-                print(f"    Simplified search: '{simplified_search}'")
-                
-                search_found = False
-                for selector in search_selectors:
-                    try:
-                        # Try to find and fill search input
-                        script = f"""
-                        const searchInput = document.querySelector('{selector}');
-                        if (searchInput) {{
-                            searchInput.value = '{simplified_search}';
-                            searchInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                            
-                            // Try to submit form
-                            const form = searchInput.closest('form');
-                            if (form) {{
-                                form.submit();
-                            }} else {{
-                                // Try Enter key
-                                searchInput.dispatchEvent(new KeyboardEvent('keypress', {{
-                                    key: 'Enter',
-                                    keyCode: 13,
-                                    bubbles: true
-                                }}));
-                            }}
-                            return true;
-                        }}
-                        return false;
-                        """
-                        
-                        exec_response = await client.post(
-                            f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
-                            headers=headers,
-                            json={"script": script},
-                            timeout=10.0
-                        )
-                        
-                        if exec_response.status_code == 200:
-                            result = exec_response.json()
-                            if result.get("value") == True:
-                                print(f"    SUCCESS: Found search box with selector: {selector}")
-                                search_found = True
-                                print(f"    Waiting 5 seconds for search results...")
-                                await asyncio.sleep(5)  # Wait for search results
-                                break
-                            else:
-                                print(f"    No search box found with selector: {selector}")
-                        else:
-                            print(f"    ERROR executing script for selector {selector}: {exec_response.status_code}")
-                    except Exception as e:
-                        print(f"    Exception with selector {selector}: {str(e)}")
-                        continue
-                
-                if not search_found:
-                    print(f"    WARNING: No search box found on {competitor_url}")
-                    print(f"    Tried selectors: {search_selectors}")
-                
-                # Extract product URLs from search results (even if no search was performed)
-                extract_script = f"""
-                const links = Array.from(document.querySelectorAll('a'));
-                const productData = [];
-                const brandLower = '{brand.lower() if brand else ""}';
-                const searchTerms = '{search_term}'.toLowerCase();
-                
-                links.forEach(link => {{
-                    const href = link.href;
-                    const text = (link.textContent || '').toLowerCase();
-                    const hrefLower = href.toLowerCase();
-                    
-                    // Skip non-product pages
-                    if (href.includes('/search') || href.includes('?q=') || 
-                        href.includes('/category') || href.includes('/collections')) {{
-                        return;
-                    }}
-                    
-                    // Check if link is relevant - if brand is empty, check for search terms in URL/text
-                    const isRelevant = brandLower ? 
-                        (hrefLower.includes(brandLower) || text.includes(brandLower)) :
-                        (searchTerms.split(' ').some(term => term.length > 2 && (hrefLower.includes(term) || text.includes(term))));
-                    
-                    if (isRelevant) {{
-                        productData.push({{
-                            url: href,
-                            text: text,
-                            searchTerms: searchTerms
-                        }});
-                    }}
-                }});
-                
-                return productData;
+                # Get page content for LLM analysis
+                get_page_info_script = """
+                return {
+                    url: window.location.href,
+                    title: document.title,
+                    hasSearchBox: !!document.querySelector('input[type="search"], input[name="q"], input[placeholder*="search" i]'),
+                    forms: Array.from(document.querySelectorAll('form')).map(f => ({
+                        action: f.action,
+                        method: f.method,
+                        inputs: Array.from(f.querySelectorAll('input')).map(i => ({
+                            type: i.type,
+                            name: i.name,
+                            placeholder: i.placeholder,
+                            id: i.id,
+                            className: i.className
+                        }))
+                    })).slice(0, 3),
+                    links: Array.from(document.querySelectorAll('a[href*="product"], a[href*="' + '${brand}'.toLowerCase() + '"]')).slice(0, 10).map(a => ({
+                        href: a.href,
+                        text: a.textContent.trim()
+                    }))
+                };
                 """
                 
-                extract_response = await client.post(
+                page_info_response = await client.post(
                     f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
                     headers=headers,
-                    json={"script": extract_script},
+                    json={"script": get_page_info_script},
                     timeout=10.0
                 )
                 
-                urls = []
-                if extract_response.status_code == 200:
-                    result = extract_response.json()
-                    product_data = result.get("value", [])
-                    
-                    # Score and filter results
-                    MIN_MATCH_SCORE = 0.5  # Minimum 50% match
-                    scored_results = []
-                    
-                    print(f"    Found {len(product_data)} potential product links")
-                    
-                    for item in product_data:
-                        if isinstance(item, dict):
-                            score = self._calculate_match_score(
-                                search_term,
-                                item.get('text', '')
-                            )
-                            if score >= MIN_MATCH_SCORE:
-                                scored_results.append((score, item['url']))
-                                print(f"      Match: {item.get('text', '')[:60]}... (score: {score:.2f})")
-                    
-                    # Sort by score and take top results
-                    scored_results.sort(reverse=True, key=lambda x: x[0])
-                    urls = [url for _, url in scored_results[:5]]
-                    
-                    if not urls and product_data:
-                        print(f"    All {len(product_data)} results scored below threshold ({MIN_MATCH_SCORE})")
+                page_info = {}
+                if page_info_response.status_code == 200:
+                    page_info = page_info_response.json().get("value", {})
+                    print(f"    Page analysis: Found search box: {page_info.get('hasSearchBox', False)}")
+                
+                # Prepare search term
+                search_term = f"{brand} {product_name}".strip() if brand else product_name.strip()
+                
+                # Ask LLM for navigation guidance
+                navigation_prompt = f"""You are helping navigate a cannabis dispensary website to find a specific product.
+
+Current page: {competitor_url}
+Page title: {page_info.get('title', 'Unknown')}
+Looking for: {search_term}
+
+Page has search box: {page_info.get('hasSearchBox', False)}
+Available forms: {json.dumps(page_info.get('forms', []), indent=2)}
+
+Your task is to provide JavaScript code to either:
+1. Find and use the search functionality to search for "{search_term}"
+2. Or if no search is available, identify product category links to click
+
+Return ONLY executable JavaScript code, no explanation. The code should:
+- For search: Find the search input, fill it with the search term, and submit
+- For navigation: Return an array of URLs to visit that might contain the product
+- Use vanilla JavaScript only
+- Return false if neither search nor relevant links are found
+"""
+                
+                print(f"    Asking LLM for navigation guidance...")
+                llm_response = navigator_llm.run([{"role": "user", "content": navigation_prompt}])
+                navigation_script = llm_response.content.strip()
+                
+                # Remove code blocks if present
+                if navigation_script.startswith("```"):
+                    navigation_script = navigation_script.split("```")[1]
+                    if navigation_script.startswith("javascript"):
+                        navigation_script = navigation_script[10:]
+                    navigation_script = navigation_script.strip()
+                
+                print(f"    Executing LLM-provided navigation script...")
+                
+                # Execute the LLM-provided script
+                nav_response = await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": navigation_script},
+                    timeout=10.0
+                )
+                
+                search_found = False
+                if nav_response.status_code == 200:
+                    nav_result = nav_response.json().get("value")
+                    if nav_result and nav_result != False:
+                        print(f"    LLM navigation successful")
+                        search_found = True
+                        # Wait for results to load
+                        await asyncio.sleep(5)
                     else:
-                        print(f"    Browserbase found {len(urls)} matching URLs")
+                        print(f"    LLM navigation returned no results")
                 else:
-                    print(f"    ERROR: Failed to extract URLs. Status: {extract_response.status_code}")
-                    print(f"    Response: {await extract_response.text()}")
+                    print(f"    ERROR executing LLM navigation script: {nav_response.status_code}")
+                    print(f"    Response: {await nav_response.text()}")
+                
+                # Now extract product information with LLM guidance
+                print(f"    Extracting product URLs with LLM assistance...")
+                
+                # Get current page state
+                extract_page_script = """
+                return {
+                    url: window.location.href,
+                    title: document.title,
+                    products: Array.from(document.querySelectorAll('a')).filter(a => {
+                        const href = a.href;
+                        const text = (a.textContent || '').trim();
+                        // Basic filtering for potential product links
+                        return text.length > 0 && 
+                               !href.includes('/search') && 
+                               !href.includes('?q=') &&
+                               !href.includes('/login') &&
+                               !href.includes('/cart') &&
+                               !href.includes('/checkout') &&
+                               (href.includes('/product') || 
+                                href.includes('/menu') || 
+                                href.includes('/shop') ||
+                                text.toLowerCase().includes('gummies') ||
+                                text.toLowerCase().includes('edible'));
+                    }).slice(0, 50).map(a => ({
+                        href: a.href,
+                        text: a.textContent.trim(),
+                        parent: a.parentElement ? a.parentElement.textContent.trim() : ''
+                    }))
+                };
+                """
+                
+                page_extract_response = await client.post(
+                    f"https://api.browserbase.com/v1/sessions/{session_id}/execute",
+                    headers=headers,
+                    json={"script": extract_page_script},
+                    timeout=10.0
+                )
+                
+                page_data = {}
+                if page_extract_response.status_code == 200:
+                    page_data = page_extract_response.json().get("value", {})
+                    print(f"    Found {len(page_data.get('products', []))} potential product links")
+                
+                # Ask LLM to identify relevant product URLs
+                extraction_prompt = f"""You are analyzing a cannabis dispensary website to find specific product URLs.
+
+Looking for: {search_term}
+Current page URL: {page_data.get('url', 'Unknown')}
+
+Potential product links found on page:
+{json.dumps(page_data.get('products', [])[:20], indent=2)}
+
+Your task is to identify which URLs are most likely to be the product we're looking for.
+Look for:
+- URLs or text containing "{brand}" (if provided)
+- URLs or text containing keywords from "{product_name}"
+- Cannabis product pages (not category pages)
+
+Return a JSON array of the most relevant URLs (up to 5), ordered by relevance.
+Format: ["url1", "url2", ...]
+If no relevant URLs found, return an empty array: []
+
+Return ONLY the JSON array, no explanation."""
+                
+                llm_extract_response = navigator_llm.run([{"role": "user", "content": extraction_prompt}])
+                urls_json = llm_extract_response.content.strip()
+                
+                # Parse the URLs
+                urls = []
+                try:
+                    # Clean up the response
+                    if urls_json.startswith("```"):
+                        urls_json = urls_json.split("```")[1]
+                        if urls_json.startswith("json"):
+                            urls_json = urls_json[4:]
+                        urls_json = urls_json.strip()
+                    
+                    urls = json.loads(urls_json)
+                    print(f"    LLM identified {len(urls)} relevant product URLs")
+                    for url in urls[:3]:  # Log first 3
+                        print(f"      - {url}")
+                except Exception as e:
+                    print(f"    ERROR parsing LLM response: {e}")
+                    print(f"    Raw response: {urls_json[:200]}...")
                 
                 # Clean up session
                 print(f"    Cleaning up Browserbase session {session_id}")
